@@ -1,0 +1,25 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "dev:memory": "MEMORY_DB=1 node --watch src/index.js",
+    "start": "node src/index.js",
+    "seed": "MEMORY_DB=0 node src/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.5"
+  },
+  "devDependencies": {
+    "embedded-postgres": "^17.2.0-beta.15"
+  }
+}

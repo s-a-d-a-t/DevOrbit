@@ -1,0 +1,79 @@
+import { Link } from 'react-router-dom';
+import { HEAT } from '../chartTheme';
+
+const FEATURES = [
+  ['✅', 'Task management', 'Priorities, tags and statuses — from backlog to done, with smart reminders for anything slipping.'],
+  ['📖', 'Learning tracker', 'Log topics, hours and difficulty. Keep a library of videos, articles, repos and courses.'],
+  ['🧠', 'Skills & projects', 'Track skill levels and progress %, link them to real projects, and watch growth over time.'],
+  ['🔥', 'Activity heatmap', 'Every task, study hour, focus session and habit feeds a GitHub-style contribution calendar.'],
+  ['🎯', 'Focus & habits', 'Built-in Pomodoro timer, daily goals, habit check-ins and a generated "Today Plan".'],
+  ['📊', 'Analytics', 'Productivity score, streaks, weekly study hours and skill progression — your growth, visualized.'],
+];
+
+// A small static preview of the contribution heatmap for the hero.
+function HeatmapPreview() {
+  const cells = [];
+  for (let i = 0; i < 7 * 26; i++) {
+    const r = Math.sin(i * 12.9898) * 43758.5453;
+    const t = r - Math.floor(r);
+    cells.push(t < 0.3 ? 0 : t < 0.55 ? 1 : t < 0.75 ? 2 : t < 0.9 ? 3 : 4);
+  }
+  return (
+    <div className="landing-heatmap" aria-hidden>
+      <div className="heatmap-grid">
+        {cells.map((lvl, i) => (
+          <div key={i} className="heatmap-cell" style={{ background: HEAT[lvl] }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function Landing() {
+  return (
+    <div className="landing">
+      <header className="landing-nav">
+        <div className="logo">
+          Dev<span>Pulse</span>
+        </div>
+        <nav>
+          <Link to="/login" className="btn ghost-link">Sign in</Link>
+          <Link to="/register" className="btn primary-link">Get started</Link>
+        </nav>
+      </header>
+
+      <section className="landing-hero">
+        <h1>
+          Your personal <span>developer OS</span>
+        </h1>
+        <p>
+          DevPulse combines task management, learning tracking, skills and developer activity
+          analytics into one system — so you can see your growth the way GitHub shows your commits.
+        </p>
+        <div className="landing-cta">
+          <Link to="/register" className="btn primary-link big">Start tracking free</Link>
+          <Link to="/login" className="btn ghost-link big">I have an account</Link>
+        </div>
+        <HeatmapPreview />
+        <p className="landing-hint">Every productive day lights up your streak.</p>
+      </section>
+
+      <section className="landing-features">
+        {FEATURES.map(([icon, title, desc]) => (
+          <div key={title} className="card">
+            <div className="feature-icon" aria-hidden>{icon}</div>
+            <h3>{title}</h3>
+            <p>{desc}</p>
+          </div>
+        ))}
+      </section>
+
+      <footer className="landing-footer">
+        Built for CS students and engineers who want to see real improvement over time.
+        <div>
+          <Link to="/register">Create your account →</Link>
+        </div>
+      </footer>
+    </div>
+  );
+}
