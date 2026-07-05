@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HEAT } from '../chartTheme';
-import { IconLogo } from '../components/icons';
+import { IconLogo, IconGitHub, IconMail } from '../components/icons';
 
 /* reveal-on-scroll */
 function useReveal() {
@@ -211,12 +211,25 @@ export default function Landing() {
 
       <footer className="landing-footer">
         <div className="landing-inner">
-          <div className="logo" style={{ fontSize: 14 }}>
-            <span className="mark" style={{ width: 26, height: 26 }}><IconLogo size={16} /></span>
-            Dev<span>Pulse</span>
+          <div className="footer-brand">
+            <div className="logo" style={{ fontSize: 15 }}>
+              <span className="mark" style={{ width: 28, height: 28 }}><IconLogo size={17} /></span>
+              Dev<span>Pulse</span>
+            </div>
+            <p>Built for developers who appreciate their own time.</p>
           </div>
-          <span>Built for developers who appreciate their own time.</span>
-          <span className="fine"><Link to="/register">CREATE ACCOUNT →</Link></span>
+          <div className="footer-credit">
+            <span className="crafted">Crafted by <strong>Sadat Amir</strong></span>
+            <div className="footer-links">
+              <a href="https://github.com/s-a-d-a-t" target="_blank" rel="noreferrer" title="GitHub — s-a-d-a-t">
+                <IconGitHub size={17} /> github.com/s-a-d-a-t
+              </a>
+              <a href="mailto:sdrkk66@gmail.com" title="Email Sadat">
+                <IconMail size={17} /> sdrkk66@gmail.com
+              </a>
+            </div>
+          </div>
+          <Link to="/register" className="btn ghost-link">Create account →</Link>
         </div>
       </footer>
     </div>

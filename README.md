@@ -2,6 +2,8 @@
 
 A developer productivity + growth tracker — your personal "developer OS". Track tasks, learning, skills, projects, habits and focus sessions, and watch your progress light up a GitHub-style contribution heatmap.
 
+**Author:** [Sadat Amir](https://github.com/s-a-d-a-t) · sdrkk66@gmail.com
+
 **Stack:** React (Vite) · Node.js + Express · PostgreSQL (Sequelize) · JWT auth · Recharts
 
 ## Quick start (no PostgreSQL install needed)

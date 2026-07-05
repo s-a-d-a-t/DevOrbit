@@ -776,11 +776,21 @@ button.icon-btn.on { color: var(--gold); background: var(--gold-wash); }
 
 .landing-footer {
   border-top: 1px solid var(--hairline);
-  padding: 44px 0 54px;
-  color: var(--dim); font-size: 13px;
+  padding: 48px 0 58px;
+  color: var(--slate); font-size: 14.5px;
 }
-.landing-footer .landing-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
-.landing-footer .fine { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; }
+.landing-footer .landing-inner { display: flex; align-items: center; justify-content: space-between; gap: 28px; flex-wrap: wrap; }
+.footer-brand p { color: var(--dim); font-size: 13.5px; margin-top: 10px; max-width: 260px; }
+.footer-credit .crafted { font-size: 14.5px; color: var(--silver); }
+.footer-credit .crafted strong { color: var(--ink); font-weight: 650; }
+.footer-links { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.footer-links a {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--mono); font-size: 13px; letter-spacing: 0.02em;
+  color: var(--silver);
+}
+.footer-links a:hover { color: var(--gold); }
+.footer-links a svg { color: var(--gold); flex-shrink: 0; }
 
 /* reveal on scroll */
 .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }

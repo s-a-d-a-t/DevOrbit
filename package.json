@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "description": "DevPulse — developer productivity and personal growth tracker",
+  "author": "Sadat Amir <sdrkk66@gmail.com> (https://github.com/s-a-d-a-t)",
   "scripts": {
     "dev": "concurrently -n server,client -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
     "dev:memory": "concurrently -n server,client -c blue,green \"npm run dev:memory -w server\" \"npm run dev -w client\"",
