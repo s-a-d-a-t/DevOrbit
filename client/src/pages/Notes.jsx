@@ -19,25 +19,70 @@ export default function Notes() {
   const [focusMode, setFocusMode] = useState(false);
   const [saveState, setSaveState] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
+
   const saveTimer = useRef(null);
-  const skipSave = useRef(false);
+  // Latest editor state, readable outside React's render cycle.
+  const draft = useRef({ id: null, title: '', content: '', dirty: false });
 
   const active = notes?.find((n) => n.id === activeId);
+
+  const persist = useCallback(async () => {
+    const d = draft.current;
+    if (!d.id || !d.dirty) return;
+    d.dirty = false;
+    clearTimeout(saveTimer.current);
+    setSaveState('saving…');
+    try {
+      await api.put(`/notes/${d.id}`, { title: d.title || 'Untitled', content: d.content });
+      setSaveState('saved');
+      setNotes((ns) =>
+        ns?.map((n) => (n.id === d.id ? { ...n, title: d.title || 'Untitled', content: d.content, updatedAt: new Date().toISOString() } : n))
+      );
+    } catch {
+      d.dirty = true;
+      setSaveState('offline — retrying');
+      saveTimer.current = setTimeout(persist, 3000);
+    }
+  }, []);
+
+  const queueSave = useCallback(() => {
+    setSaveState('typing…');
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(persist, 800);
+  }, [persist]);
+
+  const openNote = useCallback((note) => {
+    setActiveId(note.id);
+    setTitle(note.title);
+    setContent(note.content);
+    setSaveState('');
+    setHistoryOpen(false);
+    draft.current = { id: note.id, title: note.title, content: note.content, dirty: false };
+  }, []);
 
   const load = useCallback(async (selectId) => {
     const { data } = await api.get('/notes');
     setNotes(data);
     if (data.length) {
-      const pick = selectId ?? data[0].id;
-      const note = data.find((n) => n.id === pick) || data[0];
-      skipSave.current = true;
-      setActiveId(note.id);
-      setTitle(note.title);
-      setContent(note.content);
+      const note = data.find((n) => n.id === selectId) || data[0];
+      openNote(note);
+    } else {
+      setActiveId(null);
+      draft.current = { id: null, title: '', content: '', dirty: false };
     }
-  }, []);
+  }, [openNote]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Flush pending edits on unmount / tab close.
+  useEffect(() => {
+    const flush = () => persist();
+    window.addEventListener('beforeunload', flush);
+    return () => {
+      window.removeEventListener('beforeunload', flush);
+      persist();
+    };
+  }, [persist]);
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && setFocusMode(false);
@@ -45,52 +90,52 @@ export default function Notes() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // debounced autosave
-  useEffect(() => {
-    if (!activeId) return;
-    if (skipSave.current) { skipSave.current = false; return; }
-    setSaveState('typing…');
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      setSaveState('saving…');
-      await api.put(`/notes/${activeId}`, { title, content });
-      setSaveState('saved');
-      setNotes((ns) => ns.map((n) => (n.id === activeId ? { ...n, title, content, updatedAt: new Date().toISOString() } : n)));
-    }, 800);
-    return () => clearTimeout(saveTimer.current);
-  }, [title, content, activeId]);
+  const onTitle = (v) => {
+    setTitle(v);
+    draft.current.title = v;
+    draft.current.dirty = true;
+    // reflect the rename in the sidebar immediately
+    setNotes((ns) => ns?.map((n) => (n.id === draft.current.id ? { ...n, title: v || 'Untitled' } : n)));
+    queueSave();
+  };
 
-  const select = (n) => {
-    clearTimeout(saveTimer.current);
-    skipSave.current = true;
-    setActiveId(n.id);
-    setTitle(n.title);
-    setContent(n.content);
-    setSaveState('');
-    setHistoryOpen(false);
+  const onContent = (v) => {
+    setContent(v);
+    draft.current.content = v;
+    draft.current.dirty = true;
+    queueSave();
+  };
+
+  const select = async (n) => {
+    if (n.id === activeId) return;
+    await persist(); // never lose edits when switching
+    const fresh = notes.find((x) => x.id === n.id) || n;
+    openNote(fresh);
   };
 
   const create = async () => {
+    await persist();
     const { data } = await api.post('/notes', { title: 'Untitled', content: '' });
     await load(data.id);
   };
 
   const remove = async () => {
     if (!active) return;
+    draft.current.dirty = false;
+    clearTimeout(saveTimer.current);
     await api.delete(`/notes/${active.id}`);
-    setActiveId(null);
     await load();
   };
 
   const togglePin = async () => {
     if (!active) return;
+    await persist();
     await api.put(`/notes/${active.id}`, { pinned: !active.pinned });
     await load(active.id);
   };
 
-  const restore = async (v) => {
-    skipSave.current = false;
-    setContent(v.content);
+  const restore = (v) => {
+    onContent(v.content);
     setHistoryOpen(false);
   };
 
@@ -137,7 +182,14 @@ export default function Notes() {
         {active ? (
           <div className={`card editor ${focusMode ? 'focus-mode' : ''}`}>
             <div className="editor-bar">
-              <input className="title-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Untitled" />
+              <input
+                className="title-input"
+                value={title}
+                onChange={(e) => onTitle(e.target.value)}
+                onBlur={persist}
+                onKeyDown={(e) => e.key === 'Enter' && persist()}
+                placeholder="Untitled"
+              />
               <span className={`save-state ${saveState === 'saved' ? 'saved' : ''}`}>{saveState}</span>
               <button className={`icon-btn ${mode === 'edit' ? 'on' : ''}`} title="Write" onClick={() => setMode('edit')}><IconEdit size={16} /></button>
               <button className={`icon-btn ${mode === 'split' ? 'on' : ''}`} title="Split view" onClick={() => setMode('split')}><IconColumns size={16} /></button>
@@ -165,7 +217,8 @@ export default function Notes() {
               {mode !== 'read' && (
                 <textarea
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                  onChange={(e) => onContent(e.target.value)}
+                  onBlur={persist}
                   placeholder={'# Heading\n\nWrite markdown here…\n\n- [ ] checklists\n- **bold**, `code`\n\n```js\n// code blocks\n```'}
                   spellCheck={false}
                 />
