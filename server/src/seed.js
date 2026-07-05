@@ -106,9 +106,32 @@ export async function seedDemoData() {
   ]);
 
   await Resource.bulkCreate([
-    { UserId: uid, title: 'PostgreSQL indexing deep dive', url: 'https://www.postgresql.org/docs/current/indexes.html', type: 'article', tags: ['postgres'] },
-    { UserId: uid, title: 'React docs — useEffect guide', url: 'https://react.dev/learn/synchronizing-with-effects', type: 'article', tags: ['react'], consumed: true },
-    { UserId: uid, title: 'System Design Primer', url: 'https://github.com/donnemartin/system-design-primer', type: 'repo', tags: ['system-design'] },
+    {
+      UserId: uid, title: 'PostgreSQL performance', type: 'article', category: 'Databases', tags: ['postgres'],
+      links: [
+        { label: 'Official indexing docs', url: 'https://www.postgresql.org/docs/current/indexes.html' },
+        { label: 'Use The Index, Luke', url: 'https://use-the-index-luke.com' },
+        { label: 'EXPLAIN visualizer', url: 'https://explain.dalibo.com' },
+      ],
+    },
+    {
+      UserId: uid, title: 'React hooks & effects', type: 'article', category: 'Frontend', tags: ['react'], consumed: true,
+      links: [
+        { label: 'useEffect guide', url: 'https://react.dev/learn/synchronizing-with-effects' },
+        { label: 'You Might Not Need an Effect', url: 'https://react.dev/learn/you-might-not-need-an-effect' },
+      ],
+    },
+    {
+      UserId: uid, title: 'System design prep', type: 'repo', category: 'System Design', tags: ['interviews'],
+      links: [
+        { label: 'System Design Primer', url: 'https://github.com/donnemartin/system-design-primer' },
+        { label: 'ByteByteGo channel', url: 'https://youtube.com/@ByteByteGo' },
+      ],
+    },
+    {
+      UserId: uid, title: 'Quick dev videos', type: 'video', category: 'Frontend', tags: ['misc'],
+      links: [{ label: 'Fireship', url: 'https://youtube.com/@fireship' }],
+    },
   ]);
 
   console.log('[seed] done');

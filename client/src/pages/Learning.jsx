@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
-
-const RESOURCE_TYPES = ['video', 'article', 'repo', 'course', 'book', 'other'];
+import ResourceLibrary from '../components/ResourceLibrary';
+import { IconBook } from '../components/icons';
 
 export default function Learning() {
   const [logs, setLogs] = useState([]);
   const [resources, setResources] = useState([]);
   const [form, setForm] = useState({ topic: '', hours: 1, difficulty: 3, notes: '' });
-  const [resForm, setResForm] = useState({ title: '', url: '', type: 'article' });
 
   const load = () => {
     api.get('/learning').then((r) => setLogs(r.data));
@@ -20,19 +19,6 @@ export default function Learning() {
     if (!form.topic.trim()) return;
     await api.post('/learning', form);
     setForm({ topic: '', hours: 1, difficulty: 3, notes: '' });
-    load();
-  };
-
-  const addResource = async (e) => {
-    e.preventDefault();
-    if (!resForm.title.trim() || !resForm.url.trim()) return;
-    await api.post('/resources', resForm);
-    setResForm({ title: '', url: '', type: 'article' });
-    load();
-  };
-
-  const toggleConsumed = async (r) => {
-    await api.put(`/resources/${r.id}`, { consumed: !r.consumed });
     load();
   };
 
@@ -58,7 +44,7 @@ export default function Learning() {
 
       <div className="grid cols-2">
         <div className="card">
-          <h3>📖 Recent sessions</h3>
+          <h3><IconBook size={15} /> Recent sessions</h3>
           {logs.length === 0 && <div className="empty">No sessions yet — log your first one above.</div>}
           {logs.slice(0, 15).map((l) => (
             <div key={l.id} className="item-row">
@@ -75,31 +61,7 @@ export default function Learning() {
           ))}
         </div>
 
-        <div className="card">
-          <h3>🔗 Resource library</h3>
-          <form onSubmit={addResource} className="form-row mb-16">
-            <input placeholder="Title" value={resForm.title} onChange={(e) => setResForm({ ...resForm, title: e.target.value })} />
-            <input placeholder="https://…" value={resForm.url} onChange={(e) => setResForm({ ...resForm, url: e.target.value })} />
-            <select value={resForm.type} onChange={(e) => setResForm({ ...resForm, type: e.target.value })}>
-              {RESOURCE_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-            <button className="small" style={{ flex: '0 0 auto' }}>Save</button>
-          </form>
-          {resources.map((r) => (
-            <div key={r.id} className={`item-row ${r.consumed ? 'done' : ''}`}>
-              <input type="checkbox" className="checkbox" checked={r.consumed} onChange={() => toggleConsumed(r)} title="Mark consumed" />
-              <div className="grow">
-                <div className="title">
-                  <a href={r.url} target="_blank" rel="noreferrer">{r.title}</a>
-                </div>
-                <div className="meta">{r.type}</div>
-              </div>
-              <button className="danger" onClick={() => api.delete(`/resources/${r.id}`).then(load)}>✕</button>
-            </div>
-          ))}
-        </div>
+        <ResourceLibrary resources={resources} onChange={load} />
       </div>
     </>
   );

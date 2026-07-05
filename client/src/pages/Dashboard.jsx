@@ -4,6 +4,58 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import StatTile from '../components/StatTile';
 import Heatmap from '../components/Heatmap';
+import { IconTarget, IconRepeat, IconBell, IconFlame, IconClock, IconLink } from '../components/icons';
+
+// Compact resources widget: grouped by category, unread first.
+function ResourcesByCategory({ resources }) {
+  const groups = new Map();
+  for (const r of resources) {
+    const cat = r.category || 'General';
+    if (!groups.has(cat)) groups.set(cat, []);
+    groups.get(cat).push(r);
+  }
+  const sorted = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+  return (
+    <div className="card">
+      <div className="row-between" style={{ marginBottom: 16 }}>
+        <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <IconLink size={15} /> Resources by category
+        </h3>
+        <Link to="/learning">Manage →</Link>
+      </div>
+      {sorted.length === 0 && <div className="empty">No saved resources yet — add some on the Learning page.</div>}
+      {sorted.map(([cat, items]) => (
+        <div key={cat} className="res-cat">
+          <div className="res-cat-head">
+            <span className="name">{cat}</span>
+            <span className="count">{items.filter((r) => !r.consumed).length} unread · {items.length}</span>
+          </div>
+          {items
+            .sort((a, b) => a.consumed - b.consumed)
+            .slice(0, 3)
+            .map((r) => (
+              <div key={r.id} className={`item-row ${r.consumed ? 'done' : ''}`}>
+                <div className="grow">
+                  <div className="title">{r.title}</div>
+                  <div className="meta">
+                    {(r.links || []).slice(0, 3).map((l, i) => (
+                      <span key={i}>
+                        {i > 0 && ' · '}
+                        <a href={l.url} target="_blank" rel="noreferrer">{l.label || l.url}</a>
+                      </span>
+                    ))}
+                    {(r.links || []).length > 3 && ` +${r.links.length - 3} more`}
+                  </div>
+                </div>
+                <span className="res-type">{r.type}</span>
+              </div>
+            ))}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function FocusTimer({ onLogged }) {
   const [minutes, setMinutes] = useState(25);
@@ -41,7 +93,7 @@ function FocusTimer({ onLogged }) {
 
   return (
     <div className="card">
-      <h3>🎯 Focus session</h3>
+      <h3><IconClock size={15} /> Focus session</h3>
       {secondsLeft === null ? (
         <>
           <div className="form-row mb-16">
@@ -81,6 +133,7 @@ export default function Dashboard() {
   const [habits, setHabits] = useState([]);
   const [reminders, setReminders] = useState([]);
   const [heatmap, setHeatmap] = useState([]);
+  const [resources, setResources] = useState([]);
   const [newHabit, setNewHabit] = useState('');
   const today = new Date().toLocaleDateString('en-CA');
 
@@ -91,6 +144,7 @@ export default function Dashboard() {
     api.get('/habits').then((r) => setHabits(r.data));
     api.get('/analytics/reminders').then((r) => setReminders(r.data));
     api.get('/activities/heatmap?days=180').then((r) => setHeatmap(r.data));
+    api.get('/resources').then((r) => setResources(r.data));
   };
   useEffect(load, []);
 
@@ -108,7 +162,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <h1 className="page-title">Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {user.name.split(' ')[0]} 👋</h1>
+      <h1 className="page-title">Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {user.name.split(' ')[0]}</h1>
       <p className="page-sub">Here's your day at a glance.</p>
 
       <div className="grid cols-4 mb-16">
@@ -119,8 +173,9 @@ export default function Dashboard() {
       </div>
 
       <div className="grid cols-2 mb-16">
+        <div className="stack">
         <div className="card">
-          <h3>🗓 Today's plan</h3>
+          <h3><IconTarget size={15} /> Today's plan</h3>
           {plan.length === 0 && <div className="empty">Nothing urgent — pick something from your backlog.</div>}
           {plan.map((p, i) => (
             <div key={i} className="item-row">
@@ -132,11 +187,13 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
+        <ResourcesByCategory resources={resources} />
+        </div>
 
         <div className="stack">
           <FocusTimer onLogged={load} />
           <div className="card">
-            <h3>🔁 Habits today</h3>
+            <h3><IconRepeat size={15} /> Habits today</h3>
             {habits.map((h) => (
               <div key={h.id} className="item-row">
                 <input
@@ -161,7 +218,7 @@ export default function Dashboard() {
 
       {reminders.length > 0 && (
         <div className="card mb-16">
-          <h3>⏰ Reminders — due or overdue</h3>
+          <h3><IconBell size={15} /> Reminders — due or overdue</h3>
           {reminders.map((t) => (
             <div key={t.id} className="item-row">
               <div className="grow">
@@ -177,7 +234,7 @@ export default function Dashboard() {
 
       <div className="card">
         <div className="row-between" style={{ marginBottom: 14 }}>
-          <h3 style={{ margin: 0 }}>🔥 Activity — last 6 months</h3>
+          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}><IconFlame size={15} /> Activity — last 6 months</h3>
           <Link to="/analytics">Full analytics →</Link>
         </div>
         <Heatmap data={heatmap} days={180} />

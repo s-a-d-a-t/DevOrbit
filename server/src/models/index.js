@@ -94,8 +94,9 @@ export function initModels(sequelize) {
 
   Resource = sequelize.define('Resource', {
     title: { type: DataTypes.STRING, allowNull: false },
-    url: { type: DataTypes.STRING, allowNull: false },
     type: { type: DataTypes.ENUM('video', 'article', 'repo', 'course', 'book', 'other'), defaultValue: 'other' },
+    category: { type: DataTypes.STRING, defaultValue: 'General' },
+    links: { type: DataTypes.JSONB, defaultValue: [] }, // [{ label, url }] — several links per topic
     tags: { type: DataTypes.JSONB, defaultValue: [] },
     notes: { type: DataTypes.TEXT, defaultValue: '' },
     consumed: { type: DataTypes.BOOLEAN, defaultValue: false },

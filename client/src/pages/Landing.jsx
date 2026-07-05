@@ -1,13 +1,16 @@
 import { Link } from 'react-router-dom';
 import { HEAT } from '../chartTheme';
+import {
+  IconLogo, IconCheck, IconBook, IconSpark, IconFlame, IconClock, IconChart,
+} from '../components/icons';
 
 const FEATURES = [
-  ['✅', 'Task management', 'Priorities, tags and statuses — from backlog to done, with smart reminders for anything slipping.'],
-  ['📖', 'Learning tracker', 'Log topics, hours and difficulty. Keep a library of videos, articles, repos and courses.'],
-  ['🧠', 'Skills & projects', 'Track skill levels and progress %, link them to real projects, and watch growth over time.'],
-  ['🔥', 'Activity heatmap', 'Every task, study hour, focus session and habit feeds a GitHub-style contribution calendar.'],
-  ['🎯', 'Focus & habits', 'Built-in Pomodoro timer, daily goals, habit check-ins and a generated "Today Plan".'],
-  ['📊', 'Analytics', 'Productivity score, streaks, weekly study hours and skill progression — your growth, visualized.'],
+  [IconCheck, 'Task management', 'Priorities, tags and statuses — from backlog to done, with smart reminders for anything slipping.'],
+  [IconBook, 'Learning tracker', 'Log topics, hours and difficulty. Keep a categorized library of videos, articles, repos and courses.'],
+  [IconSpark, 'Skills & projects', 'Track skill levels and progress %, link them to real projects, and watch growth over time.'],
+  [IconFlame, 'Activity heatmap', 'Every task, study hour, focus session and habit feeds a GitHub-style contribution calendar.'],
+  [IconClock, 'Focus & habits', 'Built-in Pomodoro timer, daily goals, habit check-ins and a generated "Today Plan".'],
+  [IconChart, 'Analytics', 'Productivity score, streaks, weekly study hours and skill progression — your growth, visualized.'],
 ];
 
 // A small static preview of the contribution heatmap for the hero.
@@ -34,6 +37,7 @@ export default function Landing() {
     <div className="landing">
       <header className="landing-nav">
         <div className="logo">
+          <span className="mark"><IconLogo /></span>
           Dev<span>Pulse</span>
         </div>
         <nav>
@@ -43,8 +47,9 @@ export default function Landing() {
       </header>
 
       <section className="landing-hero">
+        <span className="eyebrow">// track · learn · ship</span>
         <h1>
-          Your personal <span>developer OS</span>
+          Your personal<br /><span>developer OS</span>
         </h1>
         <p>
           DevPulse combines task management, learning tracking, skills and developer activity
@@ -55,13 +60,13 @@ export default function Landing() {
           <Link to="/login" className="btn ghost-link big">I have an account</Link>
         </div>
         <HeatmapPreview />
-        <p className="landing-hint">Every productive day lights up your streak.</p>
+        <p className="landing-hint">every productive day lights up your streak</p>
       </section>
 
       <section className="landing-features">
-        {FEATURES.map(([icon, title, desc]) => (
+        {FEATURES.map(([Icon, title, desc]) => (
           <div key={title} className="card">
-            <div className="feature-icon" aria-hidden>{icon}</div>
+            <div className="feature-icon"><Icon /></div>
             <h3>{title}</h3>
             <p>{desc}</p>
           </div>

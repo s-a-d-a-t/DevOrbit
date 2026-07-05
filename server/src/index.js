@@ -12,7 +12,7 @@ if (!process.env.JWT_SECRET) {
 
 const sequelize = await connectDB();
 initModels(sequelize);
-await sequelize.sync(); // create tables if they don't exist
+await sequelize.sync({ alter: true }); // create/update tables to match models
 
 // Routes import models, so load them after initModels().
 const { requireAuth } = await import('./middleware/auth.js');

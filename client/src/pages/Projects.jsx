@@ -108,7 +108,7 @@ export default function Projects() {
         {goals.map((g) => (
           <div key={g.id} className="card">
             <div className="row-between">
-              <div style={{ fontWeight: 700 }}>{g.completed ? '✅ ' : '🎯 '}{g.title}</div>
+              <div style={{ fontWeight: 700 }}>{g.completed ? '✓ ' : ''}{g.title}</div>
               <span className="badge tag">{g.type}</span>
             </div>
             <div className="mt-8">
