@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  Task, LearningLog, Skill, Project, Goal, Habit, Resource, FocusSession,
+  Task, LearningLog, Skill, Project, Goal, Habit, Resource, FocusSession, Note,
 } from '../models/index.js';
 import { crudRouter } from './crudFactory.js';
 import { logActivity, todayKey } from '../services/activityService.js';
@@ -84,6 +84,22 @@ habits.post('/:id/toggle', async (req, res, next) => {
   }
 });
 router.use('/habits', habits);
+
+router.use(
+  '/notes',
+  crudRouter(Note, {
+    order: [['pinned', 'DESC'], ['updatedAt', 'DESC']],
+    hooks: {
+      // snapshot the previous content on each save (cap at 10 versions)
+      afterUpdate: async (doc, prev) => {
+        if (prev.content && prev.content !== doc.content) {
+          doc.versions = [{ content: prev.content, savedAt: new Date().toISOString() }, ...(doc.versions || [])].slice(0, 10);
+          await doc.save();
+        }
+      },
+    },
+  })
+);
 
 router.use(
   '/focus',

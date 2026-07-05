@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Tasks from './pages/Tasks';
+import Notes from './pages/Notes';
 import Learning from './pages/Learning';
 import Skills from './pages/Skills';
 import Projects from './pages/Projects';
@@ -32,6 +33,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/tasks" element={<Tasks />} />
+        <Route path="/notes" element={<Notes />} />
         <Route path="/learning" element={<Learning />} />
         <Route path="/skills" element={<Skills />} />
         <Route path="/projects" element={<Projects />} />

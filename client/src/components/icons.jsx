@@ -57,3 +57,33 @@ export const IconBell = (p) => (
 export const IconLogo = (p) => (
   <I {...p} size={p?.size ?? 22}><path d="M3 12h4l2.5-6 4 12L16 12h5" /></I>
 );
+export const IconNote = (p) => (
+  <I {...p}><path d="M5 3h11l3 3v15H5Z" /><path d="M15 3v4h4" /><path d="M9 12h6M9 16h4" /></I>
+);
+export const IconSearch = (p) => (
+  <I {...p}><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></I>
+);
+export const IconChevron = (p) => (
+  <I {...p}><path d="m14.5 6-5 6 5 6" /></I>
+);
+export const IconPin = (p) => (
+  <I {...p}><path d="M9 3h6l-1 7 3.5 3.5H6.5L10 10Z" /><path d="M12 13.5V21" /></I>
+);
+export const IconHistory = (p) => (
+  <I {...p}><path d="M4 12a8 8 0 1 1 2.3 5.6" /><path d="M4 13v-4h4" /><path d="M12 8v4l3 2" /></I>
+);
+export const IconEye = (p) => (
+  <I {...p}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></I>
+);
+export const IconColumns = (p) => (
+  <I {...p}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M12 4v16" /></I>
+);
+export const IconEdit = (p) => (
+  <I {...p}><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1Z" /></I>
+);
+export const IconExpand = (p) => (
+  <I {...p}><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" /></I>
+);
+export const IconPlus = (p) => (
+  <I {...p}><path d="M12 5v14M5 12h14" /></I>
+);

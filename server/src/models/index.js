@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 
 // Populated by initModels() after the DB connection is established.
 // ES-module live bindings let route files import these before init runs.
-export let User, Task, LearningLog, Skill, Project, Activity, Goal, Habit, Resource, FocusSession;
+export let User, Task, LearningLog, Skill, Project, Activity, Goal, Habit, Resource, FocusSession, Note;
 
 export function initModels(sequelize) {
   User = sequelize.define('User', {
@@ -109,7 +109,15 @@ export function initModels(sequelize) {
     taskId: { type: DataTypes.INTEGER },
   });
 
-  for (const Model of [Task, LearningLog, Skill, Project, Activity, Goal, Habit, Resource, FocusSession]) {
+  Note = sequelize.define('Note', {
+    title: { type: DataTypes.STRING, defaultValue: 'Untitled' },
+    content: { type: DataTypes.TEXT, defaultValue: '' },
+    pinned: { type: DataTypes.BOOLEAN, defaultValue: false },
+    // last 10 saved versions for history/restore: [{ content, savedAt }]
+    versions: { type: DataTypes.JSONB, defaultValue: [] },
+  });
+
+  for (const Model of [Task, LearningLog, Skill, Project, Activity, Goal, Habit, Resource, FocusSession, Note]) {
     User.hasMany(Model, { onDelete: 'CASCADE' });
     Model.belongsTo(User);
   }

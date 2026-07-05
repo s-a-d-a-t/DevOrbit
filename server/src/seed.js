@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import {
-  User, Task, LearningLog, Skill, Project, Habit, Goal, Resource,
+  User, Task, LearningLog, Skill, Project, Habit, Goal, Resource, Note,
 } from './models/index.js';
 import { logActivity, todayKey } from './services/activityService.js';
 
@@ -133,6 +133,27 @@ export async function seedDemoData() {
       links: [{ label: 'Fireship', url: 'https://youtube.com/@fireship' }],
     },
   ]);
+
+  await Note.create({
+    UserId: uid,
+    title: 'Weekly review',
+    pinned: true,
+    content: `# Week 27 review
+
+## What moved
+- Shipped the **analytics** endpoints
+- 12.5h of study — mostly SQL and system design
+
+## Next
+- [ ] Finish DevPulse dashboard polish
+- [ ] Mock interview on Thursday
+
+\`\`\`sql
+-- snippet worth keeping
+SELECT date, score FROM "Activities" ORDER BY date DESC LIMIT 7;
+\`\`\`
+`,
+  });
 
   console.log('[seed] done');
 }
