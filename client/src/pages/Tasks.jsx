@@ -85,17 +85,32 @@ export default function Tasks() {
           <h3><IconTarget size={15} /> New task</h3>
           <form onSubmit={add}>
             <div className="form-row" style={{ marginBottom: 10 }}>
-              <input style={{ flex: 2 }} placeholder="What needs doing?" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-              <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} style={{ flex: '0 0 130px' }}>
-                <option value="low">Low priority</option>
-                <option value="medium">Medium priority</option>
-                <option value="high">High priority</option>
-              </select>
-              <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} style={{ flex: '0 0 150px' }} />
+              <div style={{ flex: 2 }}>
+                <label>Task</label>
+                <input placeholder="What needs doing?" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+              </div>
+              <div style={{ flex: '0 0 150px' }}>
+                <label>Priority</label>
+                <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
+                  <option value="low">low</option>
+                  <option value="medium">medium</option>
+                  <option value="high">high</option>
+                </select>
+              </div>
+              <div style={{ flex: '0 0 160px' }}>
+                <label>Due date (optional)</label>
+                <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
+              </div>
             </div>
-            <div className="form-row">
-              <input style={{ flex: 2 }} placeholder="Details (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-              <input placeholder="tags, comma, separated" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
+            <div className="form-row" style={{ alignItems: 'flex-end' }}>
+              <div style={{ flex: 2 }}>
+                <label>Details (optional)</label>
+                <input placeholder="Context, links, acceptance criteria…" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              </div>
+              <div>
+                <label>Tags</label>
+                <input placeholder="dsa, work, devpulse" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
+              </div>
               <button style={{ flex: '0 0 auto' }}>Add task</button>
             </div>
           </form>

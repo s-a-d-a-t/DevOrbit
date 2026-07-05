@@ -88,13 +88,28 @@ export default function Projects() {
           <h3><IconFolder size={15} /> New project</h3>
           <form onSubmit={add}>
             <div className="form-row" style={{ marginBottom: 10 }}>
-              <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              <input style={{ flex: 2 }} placeholder="One-line description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-              <input placeholder="Tech, stack, comma-separated" value={form.techStack} onChange={(e) => setForm({ ...form, techStack: e.target.value })} />
+              <div>
+                <label>Project name</label>
+                <input placeholder="e.g. DevPulse" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
+              <div style={{ flex: 2 }}>
+                <label>Description</label>
+                <input placeholder="What is it, in one line?" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              </div>
+              <div>
+                <label>Tech stack</label>
+                <input placeholder="React, Node, PostgreSQL" value={form.techStack} onChange={(e) => setForm({ ...form, techStack: e.target.value })} />
+              </div>
             </div>
-            <div className="form-row">
-              <input placeholder="Repository URL" value={form.repoUrl} onChange={(e) => setForm({ ...form, repoUrl: e.target.value })} />
-              <input placeholder="Live URL (optional)" value={form.liveUrl} onChange={(e) => setForm({ ...form, liveUrl: e.target.value })} />
+            <div className="form-row" style={{ alignItems: 'flex-end' }}>
+              <div>
+                <label>Repository URL (optional)</label>
+                <input placeholder="https://github.com/…" value={form.repoUrl} onChange={(e) => setForm({ ...form, repoUrl: e.target.value })} />
+              </div>
+              <div>
+                <label>Live URL (optional)</label>
+                <input placeholder="https://…" value={form.liveUrl} onChange={(e) => setForm({ ...form, liveUrl: e.target.value })} />
+              </div>
               <button style={{ flex: '0 0 auto' }}>Add project</button>
             </div>
           </form>
@@ -146,15 +161,27 @@ export default function Projects() {
 
         <div className="widget w-12">
           <h3><IconTarget size={15} /> New goal</h3>
-          <form onSubmit={addGoal} className="form-row">
-            <input style={{ flex: 2 }} placeholder="Goal (e.g. Land a backend internship)" value={goalForm.title} onChange={(e) => setGoalForm({ ...goalForm, title: e.target.value })} />
-            <select value={goalForm.type} onChange={(e) => setGoalForm({ ...goalForm, type: e.target.value })} style={{ flex: '0 0 110px' }}>
-              <option value="daily">daily</option>
-              <option value="weekly">weekly</option>
-              <option value="career">career</option>
-            </select>
-            <input type="date" value={goalForm.targetDate} onChange={(e) => setGoalForm({ ...goalForm, targetDate: e.target.value })} style={{ flex: '0 0 150px' }} />
-            <input style={{ flex: 2 }} placeholder="Milestones, comma, separated" value={goalForm.milestones} onChange={(e) => setGoalForm({ ...goalForm, milestones: e.target.value })} />
+          <form onSubmit={addGoal} className="form-row" style={{ alignItems: 'flex-end' }}>
+            <div style={{ flex: 2 }}>
+              <label>Goal</label>
+              <input placeholder="e.g. Land a backend internship" value={goalForm.title} onChange={(e) => setGoalForm({ ...goalForm, title: e.target.value })} />
+            </div>
+            <div style={{ flex: '0 0 120px' }}>
+              <label>Cadence</label>
+              <select value={goalForm.type} onChange={(e) => setGoalForm({ ...goalForm, type: e.target.value })}>
+                <option value="daily">daily</option>
+                <option value="weekly">weekly</option>
+                <option value="career">career</option>
+              </select>
+            </div>
+            <div style={{ flex: '0 0 160px' }}>
+              <label>Target date (optional)</label>
+              <input type="date" value={goalForm.targetDate} onChange={(e) => setGoalForm({ ...goalForm, targetDate: e.target.value })} />
+            </div>
+            <div style={{ flex: 2 }}>
+              <label>Milestones — comma separated</label>
+              <input placeholder="Polish resume, 150 LeetCode, Ship portfolio" value={goalForm.milestones} onChange={(e) => setGoalForm({ ...goalForm, milestones: e.target.value })} />
+            </div>
             <button style={{ flex: '0 0 auto' }}>Add goal</button>
           </form>
         </div>

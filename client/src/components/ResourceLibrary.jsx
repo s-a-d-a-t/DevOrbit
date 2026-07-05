@@ -108,20 +108,30 @@ export default function ResourceLibrary({ resources, onChange }) {
 
       <form onSubmit={add} className="mb-16">
         <div className="form-row" style={{ marginBottom: 10 }}>
-          <input style={{ flex: 2 }} placeholder="Topic (e.g. Learn React hooks)" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <input
-            placeholder="Category"
-            list="res-categories"
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
-          />
-          <datalist id="res-categories">
-            {categories.map((c) => <option key={c} value={c} />)}
-          </datalist>
-          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={{ flex: '0 0 100px' }}>
-            {RESOURCE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
+          <div style={{ flex: 2 }}>
+            <label>Topic</label>
+            <input placeholder="e.g. Learn React hooks" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </div>
+          <div>
+            <label>Category — groups the library</label>
+            <input
+              placeholder="Frontend, Databases…"
+              list="res-categories"
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            />
+            <datalist id="res-categories">
+              {categories.map((c) => <option key={c} value={c} />)}
+            </datalist>
+          </div>
+          <div style={{ flex: '0 0 110px' }}>
+            <label>Type</label>
+            <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+              {RESOURCE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
         </div>
+        <label>Links — add every material for this topic</label>
         {linkRows.map((l, i) => (
           <div key={i} className="form-row" style={{ marginBottom: 8 }}>
             <input style={{ flex: 2 }} placeholder={`Link ${i + 1}: https://…`} value={l.url} onChange={(e) => setLink(i, { url: e.target.value })} />

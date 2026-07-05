@@ -88,8 +88,14 @@ export default function Learning() {
           <h3><IconBook size={15} /> Log a session</h3>
           <form onSubmit={addLog}>
             <div className="form-row" style={{ marginBottom: 10 }}>
-              <input style={{ flex: 2 }} placeholder="What did you study? (e.g. B-tree indexes)" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} />
-              <input type="date" value={form.date} max={todayISO()} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              <div style={{ flex: 2 }}>
+                <label>Topic</label>
+                <input placeholder="What did you study? (e.g. B-tree indexes)" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} />
+              </div>
+              <div>
+                <label>Session date</label>
+                <input type="date" value={form.date} max={todayISO()} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              </div>
             </div>
             <div className="form-row" style={{ marginBottom: 10 }}>
               <div>
