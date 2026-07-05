@@ -425,6 +425,48 @@ button.icon-btn.on { color: var(--gold); background: var(--gold-wash); }
 .chip:hover { color: var(--ink); filter: none; }
 .chip.on { background: var(--gold-wash); color: var(--gold); border-color: rgba(201, 168, 106, 0.4); }
 
+/* ---------------------------------------------------------------
+   task board
+   --------------------------------------------------------------- */
+.task-col { align-self: start; }
+.col-count {
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+  min-width: 22px; height: 20px; padding: 0 7px;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  background: var(--surface-3); color: var(--slate);
+}
+.task-card {
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-left: 2px solid var(--metal);
+  border-radius: var(--r-md);
+  padding: 12px 13px;
+  transition: border-color 0.15s, transform 0.15s var(--ease);
+}
+.task-card:hover { border-color: var(--hairline-strong); border-left-color: var(--steel); transform: translateY(-1px); }
+.task-card + .task-card { margin-top: 9px; }
+.task-card.overdue { border-left-color: var(--burgundy); }
+.task-card.today { border-left-color: var(--gold); }
+.task-card.is-done { opacity: 0.62; }
+.task-card.is-done .title { text-decoration: line-through; color: var(--dim); }
+.task-top { display: flex; align-items: flex-start; gap: 10px; }
+.task-top .title { flex: 1; min-width: 0; font-weight: 600; font-size: 13.5px; line-height: 1.4; }
+.task-desc { color: var(--slate); font-size: 12.5px; margin: 6px 0 0 26px; line-height: 1.55; }
+.task-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 9px 0 0 26px; align-items: center; }
+.task-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+.due-chip {
+  font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+  padding: 3px 8px; border-radius: 5px;
+  background: var(--surface-3); color: var(--slate);
+}
+.due-chip.overdue { background: var(--burgundy-wash); color: #c4838e; }
+.due-chip.today { background: rgba(201, 168, 106, 0.14); color: var(--gold); }
+.due-chip.soon { background: var(--ember-wash); color: #d98a5f; }
+
+/* sparkline */
+.spark { flex-shrink: 0; opacity: 0.9; }
+
 /* skeleton */
 .skeleton {
   border-radius: var(--r-sm);

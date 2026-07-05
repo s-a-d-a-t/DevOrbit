@@ -42,6 +42,7 @@ export function initModels(sequelize) {
     difficulty: { type: DataTypes.INTEGER, defaultValue: 3, validate: { min: 1, max: 5 } },
     date: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     tags: { type: DataTypes.JSONB, defaultValue: [] },
+    links: { type: DataTypes.JSONB, defaultValue: [] }, // resources used: [{ label, url }]
   });
 
   Skill = sequelize.define('Skill', {

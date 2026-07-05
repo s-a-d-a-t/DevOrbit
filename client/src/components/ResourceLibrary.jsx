@@ -47,9 +47,17 @@ function LinkAdder({ resource, onChange }) {
 }
 
 // Resource library: topics grouped by category, each topic holding multiple links.
+const EMPTY_LINK = { url: '', label: '' };
+
 export default function ResourceLibrary({ resources, onChange }) {
-  const [form, setForm] = useState({ title: '', url: '', label: '', type: 'article', category: '' });
+  const [form, setForm] = useState({ title: '', type: 'article', category: '' });
+  const [linkRows, setLinkRows] = useState([{ ...EMPTY_LINK }]);
   const [filter, setFilter] = useState('all');
+
+  const setLink = (i, patch) =>
+    setLinkRows((rows) => rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  const addLinkRow = () => setLinkRows((rows) => [...rows, { ...EMPTY_LINK }]);
+  const removeLinkRow = (i) => setLinkRows((rows) => (rows.length > 1 ? rows.filter((_, idx) => idx !== i) : rows));
 
   const categories = useMemo(
     () => [...new Set(resources.map((r) => r.category || 'General'))].sort(),
@@ -69,14 +77,18 @@ export default function ResourceLibrary({ resources, onChange }) {
 
   const add = async (e) => {
     e.preventDefault();
-    if (!form.title.trim() || !form.url.trim()) return;
+    const links = linkRows
+      .filter((l) => l.url.trim())
+      .map((l) => ({ label: l.label.trim() || hostOf(l.url), url: l.url.trim() }));
+    if (!form.title.trim() || links.length === 0) return;
     await api.post('/resources', {
       title: form.title.trim(),
       type: form.type,
       category: form.category.trim() || 'General',
-      links: [{ label: form.label.trim() || hostOf(form.url), url: form.url.trim() }],
+      links,
     });
-    setForm({ title: '', url: '', label: '', type: 'article', category: form.category });
+    setForm({ title: '', type: 'article', category: form.category });
+    setLinkRows([{ ...EMPTY_LINK }]);
     onChange();
   };
 
@@ -94,23 +106,38 @@ export default function ResourceLibrary({ resources, onChange }) {
     <div className="card">
       <h3><IconLink size={15} /> Resource library</h3>
 
-      <form onSubmit={add} className="form-row mb-16">
-        <input style={{ flex: '1 1 100%' }} placeholder="Topic (e.g. Learn React hooks)" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        <input style={{ flex: 2 }} placeholder="First link: https://…" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
-        <input placeholder="Link label (optional)" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
-        <input
-          placeholder="Category"
-          list="res-categories"
-          value={form.category}
-          onChange={(e) => setForm({ ...form, category: e.target.value })}
-        />
-        <datalist id="res-categories">
-          {categories.map((c) => <option key={c} value={c} />)}
-        </datalist>
-        <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={{ flex: '0 0 100px' }}>
-          {RESOURCE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <button className="small" style={{ flex: '0 0 auto' }}>Save</button>
+      <form onSubmit={add} className="mb-16">
+        <div className="form-row" style={{ marginBottom: 10 }}>
+          <input style={{ flex: 2 }} placeholder="Topic (e.g. Learn React hooks)" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <input
+            placeholder="Category"
+            list="res-categories"
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+          />
+          <datalist id="res-categories">
+            {categories.map((c) => <option key={c} value={c} />)}
+          </datalist>
+          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={{ flex: '0 0 100px' }}>
+            {RESOURCE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        {linkRows.map((l, i) => (
+          <div key={i} className="form-row" style={{ marginBottom: 8 }}>
+            <input style={{ flex: 2 }} placeholder={`Link ${i + 1}: https://…`} value={l.url} onChange={(e) => setLink(i, { url: e.target.value })} />
+            <input placeholder="Label (optional)" value={l.label} onChange={(e) => setLink(i, { label: e.target.value })} />
+            {linkRows.length > 1 && (
+              <button type="button" className="danger" style={{ flex: '0 0 auto' }} onClick={() => removeLinkRow(i)}>✕</button>
+            )}
+          </div>
+        ))}
+        <div className="form-row">
+          <button type="button" className="link-add-toggle" style={{ flex: '0 0 auto' }} onClick={addLinkRow}>
+            + another link
+          </button>
+          <span style={{ flex: 1 }} />
+          <button className="small" style={{ flex: '0 0 auto' }}>Save topic{linkRows.filter((l) => l.url.trim()).length > 1 ? ` · ${linkRows.filter((l) => l.url.trim()).length} links` : ''}</button>
+        </div>
       </form>
 
       {categories.length > 1 && (
