@@ -978,6 +978,25 @@ button.icon-btn.on { color: var(--gold); background: var(--gold-wash); }
 .footer-links a:hover { color: var(--gold); }
 .footer-links a svg { color: var(--gold); flex-shrink: 0; }
 
+/* ---------------------------------------------------------------
+   memories — dome gallery frame
+   --------------------------------------------------------------- */
+.dome-wrap {
+  position: relative;
+  width: 100%;
+  height: 74vh;
+  min-height: 500px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(120% 120% at 50% 0%, var(--surface-2), var(--bg) 70%);
+  box-shadow: var(--lift);
+  overflow: hidden;
+}
+@media (max-width: 800px) {
+  .dome-wrap { height: 54vh; min-height: 360px; }
+}
+
 /* reveal on scroll */
 .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
 .reveal.in { opacity: 1; transform: none; }

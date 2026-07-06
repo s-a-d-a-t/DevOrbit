@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  Task, LearningLog, Skill, Project, Goal, Habit, Resource, FocusSession, Note,
+  Task, LearningLog, Skill, Project, Goal, Habit, Resource, FocusSession, Note, Memory,
 } from '../models/index.js';
 import { crudRouter } from './crudFactory.js';
 import { logActivity, todayKey } from '../services/activityService.js';
@@ -66,6 +66,7 @@ router.use(
 router.use('/projects', crudRouter(Project));
 router.use('/goals', crudRouter(Goal));
 router.use('/resources', crudRouter(Resource));
+router.use('/memories', crudRouter(Memory, { order: [['date', 'DESC']] }));
 
 // Habits get an extra toggle endpoint for daily check-ins.
 const habits = crudRouter(Habit);

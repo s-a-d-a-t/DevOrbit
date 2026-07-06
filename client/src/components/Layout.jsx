@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
   IconGrid, IconCheck, IconBook, IconSpark, IconFolder, IconChart, IconUser,
-  IconLogo, IconNote, IconSearch, IconChevron, IconSun, IconMoon,
+  IconLogo, IconNote, IconSearch, IconChevron, IconSun, IconMoon, IconImage,
 } from './icons';
 
 const links = [
@@ -16,6 +16,7 @@ const links = [
   ['/skills', IconSpark, 'Skills'],
   ['/projects', IconFolder, 'Projects'],
   ['/analytics', IconChart, 'Analytics'],
+  ['/memories', IconImage, 'Memories'],
   ['/profile', IconUser, 'Profile'],
 ];
 

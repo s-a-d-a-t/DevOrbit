@@ -11,6 +11,7 @@ import Learning from './pages/Learning';
 import Skills from './pages/Skills';
 import Projects from './pages/Projects';
 import Analytics from './pages/Analytics';
+import Memories from './pages/Memories';
 import Profile from './pages/Profile';
 
 export default function App() {
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/skills" element={<Skills />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/memories" element={<Memories />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

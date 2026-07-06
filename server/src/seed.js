@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import {
-  User, Task, LearningLog, Skill, Project, Habit, Goal, Resource, Note,
+  User, Task, LearningLog, Skill, Project, Habit, Goal, Resource, Note, Memory,
 } from './models/index.js';
 import { logActivity, todayKey } from './services/activityService.js';
 
@@ -154,6 +154,36 @@ SELECT date, score FROM "Activities" ORDER BY date DESC LIMIT 7;
 \`\`\`
 `,
   });
+
+  const memImg = (id, w = 600) =>
+    `https://images.unsplash.com/photo-${id}?q=80&w=${w}&auto=format&fit=crop`;
+  await Memory.bulkCreate([
+    {
+      UserId: uid, title: 'First commit to DevPulse',
+      description: 'The empty repo that started it all — one README and a lot of ambition.',
+      imageUrl: memImg('1517180102446-f3ece451e9d8'), date: new Date(Date.now() - 30 * 86400000),
+    },
+    {
+      UserId: uid, title: 'Passed the system design mock',
+      description: 'Whiteboarded a URL shortener end to end. First time it actually clicked.',
+      imageUrl: memImg('1461749280684-dccba630e2f6'), date: new Date(Date.now() - 21 * 86400000),
+    },
+    {
+      UserId: uid, title: 'Shipped the analytics dashboard',
+      description: 'Charts, heatmap, the whole thing live. Watched the first real data roll in.',
+      imageUrl: memImg('1551288049-bebda4e38f71'), date: new Date(Date.now() - 12 * 86400000),
+    },
+    {
+      UserId: uid, title: 'Hit a 30-day study streak',
+      description: 'A full month of showing up. The calendar finally looks the way I wanted.',
+      imageUrl: memImg('1506905925346-21bda4d32df4'), date: new Date(Date.now() - 5 * 86400000),
+    },
+    {
+      UserId: uid, title: 'Late-night deploy that worked',
+      description: 'Green checks at 1am. Rare and beautiful.',
+      imageUrl: memImg('1498050108023-c5249f4df085'), date: new Date(Date.now() - 2 * 86400000),
+    },
+  ]);
 
   console.log('[seed] done');
 }
