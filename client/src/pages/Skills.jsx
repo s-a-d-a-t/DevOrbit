@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import StatTile from '../components/StatTile';
-import { IconSpark } from '../components/icons';
+import Modal from '../components/Modal';
+import { IconSpark, IconPlus, IconEdit } from '../components/icons';
 
 const LEVELS = ['beginner', 'intermediate', 'advanced', 'expert'];
+const BLANK = { name: '', level: 'beginner', progress: 10, category: '' };
 
 /* tiny inline history sparkline */
 function Sparkline({ history }) {
@@ -22,7 +24,7 @@ function Sparkline({ history }) {
   );
 }
 
-function SkillCard({ s, projects, projectName, update, onDelete }) {
+function SkillCard({ s, projects, projectName, update, onEdit, onDelete }) {
   const [draft, setDraft] = useState(s.progress);
   const dirty = draft !== s.progress;
 
@@ -32,29 +34,25 @@ function SkillCard({ s, projects, projectName, update, onDelete }) {
         <div>
           <div style={{ fontFamily: 'var(--display)', fontWeight: 700, fontSize: 16 }}>{s.name}</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--dim)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>
-            since {new Date(s.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+            {s.level} · since {new Date(s.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
             {s.history?.length > 1 && ` · ${s.history.length} checkpoints`}
           </div>
         </div>
-        <Sparkline history={s.history} />
+        <span className="row-actions">
+          <Sparkline history={s.history} />
+          <button className="icon-act" onClick={onEdit} title="Edit skill"><IconEdit size={15} /></button>
+          <button className="icon-act del" onClick={onDelete} title="Delete skill">✕</button>
+        </span>
       </div>
 
-      <div className="form-row" style={{ margin: '16px 0 14px' }}>
-        <div>
-          <label>Self-assessed level</label>
-          <select value={s.level} onChange={(e) => update(s, { level: e.target.value })}>
-            {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
-          </select>
-        </div>
-        <div>
-          <label>Linked projects</label>
-          <select onChange={(e) => e.target.value && update(s, { projects: [...(s.projects || []), +e.target.value] })} value="">
-            <option value="">+ link a project…</option>
-            {projects.filter((p) => !s.projects?.includes(p.id)).map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        </div>
+      <div style={{ margin: '16px 0 14px' }}>
+        <label>Linked projects</label>
+        <select onChange={(e) => e.target.value && update(s, { projects: [...(s.projects || []), +e.target.value] })} value="">
+          <option value="">+ link a project…</option>
+          {projects.filter((p) => !s.projects?.includes(p.id)).map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
       </div>
       {s.projects?.length > 0 && (
         <div className="chip-list" style={{ marginBottom: 14 }}>
@@ -75,17 +73,14 @@ function SkillCard({ s, projects, projectName, update, onDelete }) {
       />
       <div className="hint">
         Drag to your current mastery, then <strong>save</strong> — every save is recorded as a checkpoint
-        and drawn on the trend line above and in Analytics.
+        and drawn on the trend line and in Analytics.
       </div>
-      <div className="row-between mt-8">
-        <button className="danger" onClick={onDelete}>delete skill</button>
-        {dirty && (
-          <span style={{ display: 'flex', gap: 8 }}>
-            <button className="ghost small" onClick={() => setDraft(s.progress)}>Reset</button>
-            <button className="small" onClick={() => update(s, { progress: draft })}>Save {draft}%</button>
-          </span>
-        )}
-      </div>
+      {dirty && (
+        <div className="row-between mt-8" style={{ justifyContent: 'flex-end', gap: 8 }}>
+          <button className="ghost small" onClick={() => setDraft(s.progress)}>Reset</button>
+          <button className="small" onClick={() => update(s, { progress: draft })}>Save {draft}%</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -93,7 +88,8 @@ function SkillCard({ s, projects, projectName, update, onDelete }) {
 export default function Skills() {
   const [skills, setSkills] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [form, setForm] = useState({ name: '', level: 'beginner', progress: 10, category: '' });
+  const [editing, setEditing] = useState(null); // null | 'new' | skill
+  const [form, setForm] = useState(BLANK);
 
   const load = () => {
     api.get('/skills').then((r) => setSkills(r.data));
@@ -101,11 +97,26 @@ export default function Skills() {
   };
   useEffect(load, []);
 
-  const add = async (e) => {
+  const openCreate = () => { setForm(BLANK); setEditing('new'); };
+  const openEdit = (s) => {
+    setForm({ name: s.name, level: s.level, progress: s.progress, category: s.category || 'general' });
+    setEditing(s);
+  };
+  const close = () => setEditing(null);
+
+  const save = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return;
-    await api.post('/skills', { ...form, category: form.category.trim() || 'general' });
-    setForm({ name: '', level: 'beginner', progress: 10, category: form.category });
+    if (editing === 'new') {
+      await api.post('/skills', { ...form, category: form.category.trim() || 'general' });
+    } else {
+      await api.put(`/skills/${editing.id}`, {
+        name: form.name.trim(),
+        level: form.level,
+        category: form.category.trim() || 'general',
+      });
+    }
+    close();
     load();
   };
 
@@ -136,8 +147,13 @@ export default function Skills() {
 
   return (
     <>
-      <h1 className="page-title">Skills</h1>
-      <p className="page-sub">Your stack, honestly assessed — and its trajectory.</p>
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Skills</h1>
+          <p className="page-sub">Your stack, honestly assessed — and its trajectory.</p>
+        </div>
+        <button className="btn-icon" onClick={openCreate}><IconPlus size={15} /> Add skill</button>
+      </div>
 
       <div className="board">
         <div className="stat-strip">
@@ -145,32 +161,6 @@ export default function Skills() {
           <StatTile label="Avg progress" value={<>{stats.avg}<em>%</em></>} delta="across the stack" />
           <StatTile label="Strongest" value={stats.top?.name ?? '–'} delta={stats.top ? `${stats.top.progress}% · ${stats.top.level}` : ''} />
           <StatTile label="Improving" value={stats.improving} delta="up in the last 30 days" up={stats.improving > 0} />
-        </div>
-
-        <div className="widget w-12">
-          <h3><IconSpark size={15} /> Track a skill</h3>
-          <form onSubmit={add} className="form-row" style={{ alignItems: 'flex-end' }}>
-            <div style={{ flex: 2 }}>
-              <label>Skill name</label>
-              <input placeholder="e.g. TypeScript" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </div>
-            <div>
-              <label>Category</label>
-              <input placeholder="frontend, dsa…" list="skill-cats" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
-              <datalist id="skill-cats">{categories.map(([c]) => <option key={c} value={c} />)}</datalist>
-            </div>
-            <div>
-              <label>Current level</label>
-              <select value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })}>
-                {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
-              </select>
-            </div>
-            <div style={{ flex: '0 0 110px' }}>
-              <label>Progress %</label>
-              <input type="number" min="0" max="100" value={form.progress} onChange={(e) => setForm({ ...form, progress: +e.target.value })} />
-            </div>
-            <button style={{ flex: '0 0 auto' }}>Add skill</button>
-          </form>
         </div>
 
         {categories.map(([cat, items]) => (
@@ -187,14 +177,54 @@ export default function Skills() {
                   projects={projects}
                   projectName={projectName}
                   update={update}
+                  onEdit={() => openEdit(s)}
                   onDelete={() => api.delete(`/skills/${s.id}`).then(load)}
                 />
               ))}
             </div>
           </div>
         ))}
-        {skills.length === 0 && <div className="widget w-12"><div className="empty">No skills tracked yet — add your first above.</div></div>}
+        {skills.length === 0 && <div className="widget w-12"><div className="empty">No skills tracked yet — add your first with the button above.</div></div>}
       </div>
+
+      <Modal
+        open={editing !== null}
+        onClose={close}
+        title={editing === 'new' ? 'Track a skill' : 'Edit skill'}
+        sub={editing === 'new' ? 'Name it, categorize it, set a starting point.' : 'Progress is edited on the card itself.'}
+      >
+        <form onSubmit={save}>
+          <div className="form-row" style={{ marginBottom: 12 }}>
+            <div style={{ flex: 2 }}>
+              <label>Skill name</label>
+              <input autoFocus placeholder="e.g. TypeScript" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div>
+              <label>Category</label>
+              <input placeholder="frontend, dsa…" list="skill-cats" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+              <datalist id="skill-cats">{categories.map(([c]) => <option key={c} value={c} />)}</datalist>
+            </div>
+          </div>
+          <div className="form-row">
+            <div>
+              <label>Current level</label>
+              <select value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })}>
+                {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+            {editing === 'new' && (
+              <div style={{ flex: '0 0 130px' }}>
+                <label>Starting %</label>
+                <input type="number" min="0" max="100" value={form.progress} onChange={(e) => setForm({ ...form, progress: +e.target.value })} />
+              </div>
+            )}
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="ghost" onClick={close}>Cancel</button>
+            <button type="submit">{editing === 'new' ? 'Add skill' : 'Save changes'}</button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }

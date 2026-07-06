@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HEAT } from '../chartTheme';
-import { IconLogo, IconGitHub, IconMail } from '../components/icons';
+import { useTheme } from '../context/ThemeContext';
+import { IconLogo, IconGitHub, IconMail, IconSun, IconMoon } from '../components/icons';
 
 /* reveal-on-scroll */
 function useReveal() {
@@ -73,6 +74,7 @@ const TESTIMONIALS = [
 
 export default function Landing() {
   useReveal();
+  const { theme, toggleTheme } = useTheme();
   return (
     <div className="landing">
       <div className="landing-inner">
@@ -82,6 +84,9 @@ export default function Landing() {
             Dev<span>Pulse</span>
           </div>
           <nav>
+            <button className="theme-toggle" onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
+              {theme === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
+            </button>
             <Link to="/login" className="btn ghost-link">Sign in</Link>
             <Link to="/register" className="btn">Get started</Link>
           </nav>

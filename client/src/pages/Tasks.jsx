@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import StatTile from '../components/StatTile';
-import { IconCheck, IconClock, IconTarget } from '../components/icons';
+import Modal from '../components/Modal';
+import { IconCheck, IconClock, IconTarget, IconPlus, IconEdit } from '../components/icons';
 
 const COLUMNS = [
   ['pending', 'Backlog'],
@@ -9,6 +10,7 @@ const COLUMNS = [
   ['done', 'Done'],
 ];
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
+const BLANK = { title: '', description: '', priority: 'medium', tags: '', dueDate: '' };
 
 const dueInfo = (t) => {
   if (!t.dueDate || t.status === 'done') return null;
@@ -25,22 +27,38 @@ export default function Tasks() {
   const [tasks, setTasks] = useState([]);
   const [query, setQuery] = useState('');
   const [prio, setPrio] = useState('all');
-  const [form, setForm] = useState({ title: '', description: '', priority: 'medium', tags: '', dueDate: '' });
+  const [editing, setEditing] = useState(null); // null = closed, 'new' = create, else task
+  const [form, setForm] = useState(BLANK);
 
   const load = () => api.get('/tasks').then((r) => setTasks(r.data));
   useEffect(() => { load(); }, []);
 
-  const add = async (e) => {
+  const openCreate = () => { setForm(BLANK); setEditing('new'); };
+  const openEdit = (t) => {
+    setForm({
+      title: t.title,
+      description: t.description || '',
+      priority: t.priority,
+      tags: (t.tags || []).join(', '),
+      dueDate: t.dueDate ? String(t.dueDate).slice(0, 10) : '',
+    });
+    setEditing(t);
+  };
+  const close = () => setEditing(null);
+
+  const save = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) return;
-    await api.post('/tasks', {
+    const payload = {
       title: form.title.trim(),
       description: form.description.trim(),
       priority: form.priority,
       tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
-      dueDate: form.dueDate || undefined,
-    });
-    setForm({ title: '', description: '', priority: 'medium', tags: '', dueDate: '' });
+      dueDate: form.dueDate || null,
+    };
+    if (editing === 'new') await api.post('/tasks', payload);
+    else await api.put(`/tasks/${editing.id}`, payload);
+    close();
     load();
   };
 
@@ -70,8 +88,13 @@ export default function Tasks() {
 
   return (
     <>
-      <h1 className="page-title">Tasks</h1>
-      <p className="page-sub">Backlog to done, nothing slips.</p>
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Tasks</h1>
+          <p className="page-sub">Backlog to done, nothing slips.</p>
+        </div>
+        <button className="btn-icon" onClick={openCreate}><IconPlus size={15} /> New task</button>
+      </div>
 
       <div className="board">
         <div className="stat-strip">
@@ -79,41 +102,6 @@ export default function Tasks() {
           <StatTile label="Overdue" value={stats.overdue} delta={stats.overdue ? 'clear these first' : 'all clear'} up={stats.overdue === 0} />
           <StatTile label="Completed" value={stats.done} delta="all time" />
           <StatTile label="Completion" value={<>{stats.rate}<em>%</em></>} delta={`${tasks.length} total tasks`} up={stats.rate >= 50} />
-        </div>
-
-        <div className="widget w-12">
-          <h3><IconTarget size={15} /> New task</h3>
-          <form onSubmit={add}>
-            <div className="form-row" style={{ marginBottom: 10 }}>
-              <div style={{ flex: 2 }}>
-                <label>Task</label>
-                <input placeholder="What needs doing?" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-              </div>
-              <div style={{ flex: '0 0 150px' }}>
-                <label>Priority</label>
-                <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
-                  <option value="low">low</option>
-                  <option value="medium">medium</option>
-                  <option value="high">high</option>
-                </select>
-              </div>
-              <div style={{ flex: '0 0 160px' }}>
-                <label>Due date (optional)</label>
-                <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
-              </div>
-            </div>
-            <div className="form-row" style={{ alignItems: 'flex-end' }}>
-              <div style={{ flex: 2 }}>
-                <label>Details (optional)</label>
-                <input placeholder="Context, links, acceptance criteria…" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-              </div>
-              <div>
-                <label>Tags</label>
-                <input placeholder="dsa, work, devpulse" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
-              </div>
-              <button style={{ flex: '0 0 auto' }}>Add task</button>
-            </div>
-          </form>
         </div>
 
         <div className="w-12 row-between" style={{ flexWrap: 'wrap', gap: 10 }}>
@@ -150,7 +138,10 @@ export default function Tasks() {
                         title={t.status === 'done' ? 'Reopen' : 'Mark done'}
                       />
                       <span className="title">{t.title}</span>
-                      <button className="danger" onClick={() => remove(t)}>✕</button>
+                      <span className="row-actions">
+                        <button className="icon-act" onClick={() => openEdit(t)} title="Edit task"><IconEdit size={15} /></button>
+                        <button className="icon-act del" onClick={() => remove(t)} title="Delete task">✕</button>
+                      </span>
                     </div>
                     {t.description && <div className="task-desc">{t.description}</div>}
                     <div className="task-meta">
@@ -176,6 +167,48 @@ export default function Tasks() {
           );
         })}
       </div>
+
+      <Modal
+        open={editing !== null}
+        onClose={close}
+        title={editing === 'new' ? 'New task' : 'Edit task'}
+        sub={editing === 'new' ? 'Capture it now, sort it later.' : 'Update the details below.'}
+      >
+        <form onSubmit={save}>
+          <div className="form-row" style={{ marginBottom: 12 }}>
+            <div style={{ flex: '1 1 100%' }}>
+              <label>Task</label>
+              <input autoFocus placeholder="What needs doing?" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            </div>
+          </div>
+          <div className="form-row" style={{ marginBottom: 12 }}>
+            <div style={{ flex: '0 0 150px' }}>
+              <label>Priority</label>
+              <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+              </select>
+            </div>
+            <div style={{ flex: '0 0 170px' }}>
+              <label>Due date (optional)</label>
+              <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
+            </div>
+            <div>
+              <label>Tags</label>
+              <input placeholder="dsa, work, devpulse" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <label>Details (optional)</label>
+            <textarea rows={3} placeholder="Context, links, acceptance criteria…" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="ghost" onClick={close}>Cancel</button>
+            <button type="submit">{editing === 'new' ? 'Add task' : 'Save changes'}</button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }

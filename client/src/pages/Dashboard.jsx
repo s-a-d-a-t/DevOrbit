@@ -9,7 +9,7 @@ import {
   IconTarget, IconRepeat, IconBell, IconFlame, IconClock, IconLink, IconNote,
   IconSpark, IconChart, IconFolder,
 } from '../components/icons';
-import { SERIES, INK, tooltipStyle } from '../chartTheme';
+import { SERIES, INK, CURSOR, tooltipStyle } from '../chartTheme';
 
 /* ---- focus timer ---- */
 function FocusTimer({ onLogged }) {
@@ -238,7 +238,7 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={150}>
             <BarChart data={week} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
               <XAxis dataKey="day" stroke="none" tick={{ fill: INK.muted, fontSize: 10.5, fontFamily: 'JetBrains Mono' }} tickLine={false} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: CURSOR }} />
               <Bar dataKey="score" name="Score" fill={SERIES[0]} radius={[4, 4, 0, 0]} maxBarSize={22} />
             </BarChart>
           </ResponsiveContainer>

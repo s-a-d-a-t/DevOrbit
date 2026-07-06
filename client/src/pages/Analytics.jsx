@@ -6,11 +6,10 @@ import {
 import api from '../api';
 import StatTile from '../components/StatTile';
 import Heatmap from '../components/Heatmap';
-import { SERIES, INK, GRID, AXIS, tooltipStyle } from '../chartTheme';
-
-const axisProps = { stroke: AXIS, tick: { fill: INK.muted ?? '#898781', fontSize: 12 }, tickLine: false };
+import { SERIES, INK, GRID, AXIS, CURSOR, tooltipStyle } from '../chartTheme';
 
 export default function Analytics() {
+  const axisProps = { stroke: AXIS, tick: { fill: INK.muted, fontSize: 12 }, tickLine: false };
   const [range, setRange] = useState('week');
   const [summary, setSummary] = useState(null);
   const [studyHours, setStudyHours] = useState([]);
@@ -87,7 +86,7 @@ export default function Analytics() {
               <CartesianGrid stroke={GRID} vertical={false} />
               <XAxis dataKey="week" {...axisProps} tickFormatter={(w) => w.split('-')[1]} />
               <YAxis {...axisProps} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: CURSOR }} />
               <Bar dataKey="hours" name="Hours" fill={SERIES[0]} radius={[4, 4, 0, 0]} maxBarSize={28} />
             </BarChart>
           </ResponsiveContainer>
@@ -100,7 +99,7 @@ export default function Analytics() {
               <CartesianGrid stroke={GRID} horizontal={false} />
               <XAxis type="number" {...axisProps} allowDecimals={false} />
               <YAxis type="category" dataKey="name" {...axisProps} width={80} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: CURSOR }} />
               <Bar dataKey="count" name="Tasks" fill={SERIES[1]} radius={[0, 4, 4, 0]} maxBarSize={22} />
             </BarChart>
           </ResponsiveContainer>

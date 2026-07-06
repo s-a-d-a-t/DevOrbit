@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import StatTile from '../components/StatTile';
-import { IconFolder, IconTarget } from '../components/icons';
+import Modal from '../components/Modal';
+import { IconFolder, IconTarget, IconPlus, IconEdit } from '../components/icons';
 
 const STATUSES = ['planned', 'ongoing', 'completed', 'paused'];
+const BLANK_PROJECT = { name: '', description: '', techStack: '', repoUrl: '', liveUrl: '', status: 'planned' };
+const BLANK_GOAL = { title: '', type: 'career', targetDate: '', milestones: [{ title: '', done: false }] };
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : null);
 const daysBetween = (a, b) => Math.max(1, Math.round((new Date(b) - new Date(a)) / 86400000));
@@ -13,8 +16,10 @@ export default function Projects() {
   const [goals, setGoals] = useState([]);
   const [skills, setSkills] = useState([]);
   const [filter, setFilter] = useState('all');
-  const [form, setForm] = useState({ name: '', description: '', techStack: '', repoUrl: '', liveUrl: '' });
-  const [goalForm, setGoalForm] = useState({ title: '', type: 'career', targetDate: '', milestones: '' });
+  const [projModal, setProjModal] = useState(null); // null | 'new' | project
+  const [projForm, setProjForm] = useState(BLANK_PROJECT);
+  const [goalModal, setGoalModal] = useState(null); // null | 'new' | goal
+  const [goalForm, setGoalForm] = useState(BLANK_GOAL);
 
   const load = () => {
     api.get('/projects').then((r) => setProjects(r.data));
@@ -23,33 +28,84 @@ export default function Projects() {
   };
   useEffect(load, []);
 
-  const add = async (e) => {
-    e.preventDefault();
-    if (!form.name.trim()) return;
-    await api.post('/projects', {
-      ...form,
-      techStack: form.techStack.split(',').map((t) => t.trim()).filter(Boolean),
-      startedAt: new Date(),
+  /* ---- projects ---- */
+  const openProjCreate = () => { setProjForm(BLANK_PROJECT); setProjModal('new'); };
+  const openProjEdit = (p) => {
+    setProjForm({
+      name: p.name,
+      description: p.description || '',
+      techStack: (p.techStack || []).join(', '),
+      repoUrl: p.repoUrl || '',
+      liveUrl: p.liveUrl || '',
+      status: p.status,
     });
-    setForm({ name: '', description: '', techStack: '', repoUrl: '', liveUrl: '' });
-    load();
+    setProjModal(p);
   };
-
-  const addGoal = async (e) => {
+  const saveProject = async (e) => {
     e.preventDefault();
-    if (!goalForm.title.trim()) return;
-    await api.post('/goals', {
-      title: goalForm.title,
-      type: goalForm.type,
-      targetDate: goalForm.targetDate || undefined,
-      milestones: goalForm.milestones.split(',').map((t) => t.trim()).filter(Boolean).map((title) => ({ title })),
-    });
-    setGoalForm({ title: '', type: 'career', targetDate: '', milestones: '' });
+    if (!projForm.name.trim()) return;
+    const payload = {
+      name: projForm.name.trim(),
+      description: projForm.description.trim(),
+      techStack: projForm.techStack.split(',').map((t) => t.trim()).filter(Boolean),
+      repoUrl: projForm.repoUrl.trim(),
+      liveUrl: projForm.liveUrl.trim(),
+    };
+    if (projModal === 'new') {
+      await api.post('/projects', { ...payload, startedAt: new Date() });
+    } else {
+      const status = projForm.status;
+      await api.put(`/projects/${projModal.id}`, {
+        ...payload,
+        status,
+        ...(status === 'completed' && !projModal.completedAt ? { completedAt: new Date() } : {}),
+        ...(status !== 'completed' ? { completedAt: null } : {}),
+      });
+    }
+    setProjModal(null);
     load();
   };
 
   const setStatus = async (p, status) => {
-    await api.put(`/projects/${p.id}`, { status, ...(status === 'completed' ? { completedAt: new Date() } : {}) });
+    await api.put(`/projects/${p.id}`, {
+      status,
+      ...(status === 'completed' ? { completedAt: new Date() } : { completedAt: null }),
+    });
+    load();
+  };
+
+  /* ---- goals ---- */
+  const openGoalCreate = () => { setGoalForm(BLANK_GOAL); setGoalModal('new'); };
+  const openGoalEdit = (g) => {
+    setGoalForm({
+      title: g.title,
+      type: g.type,
+      targetDate: g.targetDate ? String(g.targetDate).slice(0, 10) : '',
+      milestones: g.milestones.length ? g.milestones.map((m) => ({ ...m })) : [{ title: '', done: false }],
+    });
+    setGoalModal(g);
+  };
+  const setMilestone = (i, title) =>
+    setGoalForm((f) => ({ ...f, milestones: f.milestones.map((m, idx) => (idx === i ? { ...m, title } : m)) }));
+  const addMilestone = () => setGoalForm((f) => ({ ...f, milestones: [...f.milestones, { title: '', done: false }] }));
+  const removeMilestone = (i) =>
+    setGoalForm((f) => ({ ...f, milestones: f.milestones.length > 1 ? f.milestones.filter((_, idx) => idx !== i) : f.milestones }));
+
+  const saveGoal = async (e) => {
+    e.preventDefault();
+    if (!goalForm.title.trim()) return;
+    const milestones = goalForm.milestones.filter((m) => m.title.trim()).map((m) => ({ title: m.title.trim(), done: !!m.done }));
+    const completed = milestones.length > 0 && milestones.every((m) => m.done);
+    const payload = {
+      title: goalForm.title.trim(),
+      type: goalForm.type,
+      targetDate: goalForm.targetDate || null,
+      milestones,
+      completed,
+    };
+    if (goalModal === 'new') await api.post('/goals', payload);
+    else await api.put(`/goals/${goalModal.id}`, payload);
+    setGoalModal(null);
     load();
   };
 
@@ -73,8 +129,13 @@ export default function Projects() {
 
   return (
     <>
-      <h1 className="page-title">Projects &amp; Goals</h1>
-      <p className="page-sub">What you're building, and where it's taking you.</p>
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Projects &amp; Goals</h1>
+          <p className="page-sub">What you're building, and where it's taking you.</p>
+        </div>
+        <button className="btn-icon" onClick={openProjCreate}><IconPlus size={15} /> New project</button>
+      </div>
 
       <div className="board">
         <div className="stat-strip">
@@ -82,37 +143,6 @@ export default function Projects() {
           <StatTile label="Shipped" value={stats.completed} delta="completed projects" up={stats.completed > 0} />
           <StatTile label="Technologies" value={stats.tech} delta="across your stack" />
           <StatTile label="Goals met" value={`${stats.goalsDone}/${goals.length || 0}`} delta="milestone-complete" up={stats.goalsDone > 0} />
-        </div>
-
-        <div className="widget w-12">
-          <h3><IconFolder size={15} /> New project</h3>
-          <form onSubmit={add}>
-            <div className="form-row" style={{ marginBottom: 10 }}>
-              <div>
-                <label>Project name</label>
-                <input placeholder="e.g. DevPulse" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              </div>
-              <div style={{ flex: 2 }}>
-                <label>Description</label>
-                <input placeholder="What is it, in one line?" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-              </div>
-              <div>
-                <label>Tech stack</label>
-                <input placeholder="React, Node, PostgreSQL" value={form.techStack} onChange={(e) => setForm({ ...form, techStack: e.target.value })} />
-              </div>
-            </div>
-            <div className="form-row" style={{ alignItems: 'flex-end' }}>
-              <div>
-                <label>Repository URL (optional)</label>
-                <input placeholder="https://github.com/…" value={form.repoUrl} onChange={(e) => setForm({ ...form, repoUrl: e.target.value })} />
-              </div>
-              <div>
-                <label>Live URL (optional)</label>
-                <input placeholder="https://…" value={form.liveUrl} onChange={(e) => setForm({ ...form, liveUrl: e.target.value })} />
-              </div>
-              <button style={{ flex: '0 0 auto' }}>Add project</button>
-            </div>
-          </form>
         </div>
 
         <div className="w-12 chip-list">
@@ -127,7 +157,11 @@ export default function Projects() {
           <div key={p.id} className="widget w-6 project-card">
             <div className="row-between">
               <div style={{ fontFamily: 'var(--display)', fontWeight: 700, fontSize: 17 }}>{p.name}</div>
-              <span className={`badge status-${p.status}`}>{p.status}</span>
+              <span className="row-actions">
+                <span className={`badge status-${p.status}`}>{p.status}</span>
+                <button className="icon-act" onClick={() => openProjEdit(p)} title="Edit project"><IconEdit size={15} /></button>
+                <button className="icon-act del" onClick={() => api.delete(`/projects/${p.id}`).then(load)} title="Delete project">✕</button>
+              </span>
             </div>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--dim)', letterSpacing: '0.08em', marginTop: 3 }}>
               {fmtDate(p.startedAt) && <>started {fmtDate(p.startedAt)}</>}
@@ -148,44 +182,20 @@ export default function Projects() {
                 {p.repoUrl && <a href={p.repoUrl} target="_blank" rel="noreferrer" style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>repo ↗</a>}
                 {p.liveUrl && <a href={p.liveUrl} target="_blank" rel="noreferrer" style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>live ↗</a>}
               </span>
-              <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <select value={p.status} onChange={(e) => setStatus(p, e.target.value)} style={{ width: 130 }}>
-                  {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <button className="danger" onClick={() => api.delete(`/projects/${p.id}`).then(load)}>✕</button>
-              </span>
+              <select value={p.status} onChange={(e) => setStatus(p, e.target.value)} style={{ width: 130 }}>
+                {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
           </div>
         ))}
-        {visible.length === 0 && <div className="widget w-12"><div className="empty">Nothing here — add a project above.</div></div>}
+        {visible.length === 0 && <div className="widget w-12"><div className="empty">Nothing here — add a project with the button above.</div></div>}
 
-        <div className="widget w-12">
-          <h3><IconTarget size={15} /> New goal</h3>
-          <form onSubmit={addGoal} className="form-row" style={{ alignItems: 'flex-end' }}>
-            <div style={{ flex: 2 }}>
-              <label>Goal</label>
-              <input placeholder="e.g. Land a backend internship" value={goalForm.title} onChange={(e) => setGoalForm({ ...goalForm, title: e.target.value })} />
-            </div>
-            <div style={{ flex: '0 0 120px' }}>
-              <label>Cadence</label>
-              <select value={goalForm.type} onChange={(e) => setGoalForm({ ...goalForm, type: e.target.value })}>
-                <option value="daily">daily</option>
-                <option value="weekly">weekly</option>
-                <option value="career">career</option>
-              </select>
-            </div>
-            <div style={{ flex: '0 0 160px' }}>
-              <label>Target date (optional)</label>
-              <input type="date" value={goalForm.targetDate} onChange={(e) => setGoalForm({ ...goalForm, targetDate: e.target.value })} />
-            </div>
-            <div style={{ flex: 2 }}>
-              <label>Milestones — comma separated</label>
-              <input placeholder="Polish resume, 150 LeetCode, Ship portfolio" value={goalForm.milestones} onChange={(e) => setGoalForm({ ...goalForm, milestones: e.target.value })} />
-            </div>
-            <button style={{ flex: '0 0 auto' }}>Add goal</button>
-          </form>
+        <div className="section-head">
+          <span className="section-title">Goals <small>{goals.length} tracked</small></span>
+          <button className="btn-icon small" onClick={openGoalCreate}><IconPlus size={14} /> New goal</button>
         </div>
 
+        {goals.length === 0 && <div className="widget w-12"><div className="empty">No goals yet — set one to give your work direction.</div></div>}
         {goals.map((g) => {
           const done = g.milestones.filter((m) => m.done).length;
           const pct = g.milestones.length ? Math.round((done / g.milestones.length) * 100) : g.completed ? 100 : 0;
@@ -196,7 +206,11 @@ export default function Projects() {
                 <div style={{ fontFamily: 'var(--display)', fontWeight: 700, fontSize: 15 }}>
                   {g.completed && <span style={{ color: 'var(--forest)' }}>✓ </span>}{g.title}
                 </div>
-                <span className="badge tag">{g.type}</span>
+                <span className="row-actions">
+                  <span className="badge tag">{g.type}</span>
+                  <button className="icon-act" onClick={() => openGoalEdit(g)} title="Edit goal"><IconEdit size={15} /></button>
+                  <button className="icon-act del" onClick={() => api.delete(`/goals/${g.id}`).then(load)} title="Delete goal">✕</button>
+                </span>
               </div>
               <div className="row-between" style={{ margin: '10px 0 6px' }}>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--dim)', letterSpacing: '0.08em' }}>
@@ -212,13 +226,109 @@ export default function Projects() {
                   <div className="grow title">{m.title}</div>
                 </div>
               ))}
-              <div style={{ textAlign: 'right', marginTop: 8 }}>
-                <button className="danger" onClick={() => api.delete(`/goals/${g.id}`).then(load)}>delete</button>
-              </div>
             </div>
           );
         })}
       </div>
+
+      {/* project create/edit */}
+      <Modal
+        open={projModal !== null}
+        onClose={() => setProjModal(null)}
+        wide
+        title={projModal === 'new' ? 'New project' : 'Edit project'}
+        sub="Name, stack, and the links that matter — all editable later."
+      >
+        <form onSubmit={saveProject}>
+          <div className="form-row" style={{ marginBottom: 10 }}>
+            <div style={{ flex: 2 }}>
+              <label>Project name</label>
+              <input autoFocus placeholder="e.g. DevPulse" value={projForm.name} onChange={(e) => setProjForm({ ...projForm, name: e.target.value })} />
+            </div>
+            <div>
+              <label>Tech stack</label>
+              <input placeholder="React, Node, PostgreSQL" value={projForm.techStack} onChange={(e) => setProjForm({ ...projForm, techStack: e.target.value })} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <label>Description</label>
+            <input placeholder="What is it, in one line?" value={projForm.description} onChange={(e) => setProjForm({ ...projForm, description: e.target.value })} />
+          </div>
+          <div className="form-row" style={{ marginBottom: 10 }}>
+            <div>
+              <label>Repository URL (optional)</label>
+              <input placeholder="https://github.com/…" value={projForm.repoUrl} onChange={(e) => setProjForm({ ...projForm, repoUrl: e.target.value })} />
+            </div>
+            <div>
+              <label>Live URL (optional)</label>
+              <input placeholder="https://…" value={projForm.liveUrl} onChange={(e) => setProjForm({ ...projForm, liveUrl: e.target.value })} />
+            </div>
+          </div>
+          {projModal !== 'new' && (
+            <div style={{ flex: '0 0 160px', maxWidth: 200 }}>
+              <label>Status</label>
+              <select value={projForm.status} onChange={(e) => setProjForm({ ...projForm, status: e.target.value })}>
+                {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
+          <div className="modal-actions">
+            <button type="button" className="ghost" onClick={() => setProjModal(null)}>Cancel</button>
+            <button type="submit">{projModal === 'new' ? 'Add project' : 'Save changes'}</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* goal create/edit */}
+      <Modal
+        open={goalModal !== null}
+        onClose={() => setGoalModal(null)}
+        wide
+        title={goalModal === 'new' ? 'New goal' : 'Edit goal'}
+        sub="Break it into milestones you can check off as you go."
+      >
+        <form onSubmit={saveGoal}>
+          <div className="form-row" style={{ marginBottom: 10 }}>
+            <div style={{ flex: 2 }}>
+              <label>Goal</label>
+              <input autoFocus placeholder="e.g. Land a backend internship" value={goalForm.title} onChange={(e) => setGoalForm({ ...goalForm, title: e.target.value })} />
+            </div>
+            <div style={{ flex: '0 0 120px' }}>
+              <label>Cadence</label>
+              <select value={goalForm.type} onChange={(e) => setGoalForm({ ...goalForm, type: e.target.value })}>
+                <option value="daily">daily</option>
+                <option value="weekly">weekly</option>
+                <option value="career">career</option>
+              </select>
+            </div>
+            <div style={{ flex: '0 0 160px' }}>
+              <label>Target date (optional)</label>
+              <input type="date" value={goalForm.targetDate} onChange={(e) => setGoalForm({ ...goalForm, targetDate: e.target.value })} />
+            </div>
+          </div>
+          <label>Milestones</label>
+          {goalForm.milestones.map((m, i) => (
+            <div key={i} className="form-row" style={{ marginBottom: 8, alignItems: 'center' }}>
+              {goalModal !== 'new' && (
+                <input
+                  type="checkbox" className="checkbox" checked={!!m.done} style={{ flex: '0 0 auto' }}
+                  onChange={(e) => setGoalForm((f) => ({ ...f, milestones: f.milestones.map((x, idx) => (idx === i ? { ...x, done: e.target.checked } : x)) }))}
+                  title="Mark done"
+                />
+              )}
+              <input style={{ flex: 2 }} placeholder={`Milestone ${i + 1}`} value={m.title} onChange={(e) => setMilestone(i, e.target.value)} />
+              {goalForm.milestones.length > 1 && (
+                <button type="button" className="icon-act del" style={{ flex: '0 0 auto' }} onClick={() => removeMilestone(i)} title="Remove">✕</button>
+              )}
+            </div>
+          ))}
+          <button type="button" className="link-add-toggle" onClick={addMilestone}>+ another milestone</button>
+          <div className="modal-actions">
+            <button type="button" className="ghost" onClick={() => setGoalModal(null)}>Cancel</button>
+            <button type="submit">{goalModal === 'new' ? 'Add goal' : 'Save changes'}</button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }

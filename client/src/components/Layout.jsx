@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import {
   IconGrid, IconCheck, IconBook, IconSpark, IconFolder, IconChart, IconUser,
-  IconLogo, IconNote, IconSearch, IconChevron,
+  IconLogo, IconNote, IconSearch, IconChevron, IconSun, IconMoon,
 } from './icons';
 
 const links = [
@@ -22,6 +23,7 @@ const mobileLinks = links.filter(([to]) => ['/', '/tasks', '/notes', '/analytics
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('dp_sidebar') === '1');
   const [dueCount, setDueCount] = useState(0);
 
@@ -48,9 +50,14 @@ export default function Layout() {
             <span className="mark"><IconLogo /></span>
             <span className="word">Dev<span>Pulse</span></span>
           </div>
-          <button className="collapse-btn" onClick={() => setCollapsed(!collapsed)} title={collapsed ? 'Expand' : 'Collapse'}>
-            <IconChevron size={16} />
-          </button>
+          <div className="top-actions">
+            <button className="theme-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
+              {theme === 'dark' ? <IconSun size={15} /> : <IconMoon size={15} />}
+            </button>
+            <button className="collapse-btn" onClick={() => setCollapsed(!collapsed)} title={collapsed ? 'Expand' : 'Collapse'}>
+              <IconChevron size={16} />
+            </button>
+          </div>
         </div>
 
         <div className="workspace" title="Workspace">
