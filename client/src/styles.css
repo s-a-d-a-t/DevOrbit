@@ -1028,6 +1028,33 @@ button.icon-btn.on { color: var(--gold); background: var(--gold-wash); }
 .auth-card form { display: flex; flex-direction: column; gap: 14px; }
 .auth-error { color: var(--error-ink); font-size: 13px; }
 
+/* profile identity header */
+.profile-hero {
+  display: flex; align-items: center; gap: 16px;
+  max-width: 520px; margin-bottom: 14px;
+  padding: 18px 20px;
+  background: linear-gradient(180deg, var(--sheen), transparent 40%), var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lift);
+}
+.profile-avatar {
+  flex-shrink: 0;
+  width: 52px; height: 52px; border-radius: 15px;
+  display: grid; place-items: center;
+  font-family: var(--display); font-weight: 700; font-size: 19px;
+  color: var(--on-accent);
+  background: linear-gradient(155deg, var(--gold-strong), var(--gold));
+  box-shadow: 0 8px 18px -8px rgba(var(--accent-rgb), 0.55), 0 1px 0 rgba(255, 255, 255, 0.25) inset;
+}
+.profile-name { font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
+.profile-mail { color: var(--dim); font-size: 13px; margin-top: 2px; }
+.profile-gh {
+  margin-left: auto; font-family: var(--mono); font-size: 12px; font-weight: 600;
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--gold-wash); color: var(--gold);
+}
+
 /* ---------------------------------------------------------------
    landing — editorial
    --------------------------------------------------------------- */

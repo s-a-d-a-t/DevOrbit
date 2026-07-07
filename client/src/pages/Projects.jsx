@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import StatTile from '../components/StatTile';
 import Modal from '../components/Modal';
-import { IconFolder, IconTarget, IconPlus, IconEdit } from '../components/icons';
+import { IconFolder, IconTarget, IconPlus, IconEdit, IconCheck, IconSpark } from '../components/icons';
 
 const STATUSES = ['planned', 'ongoing', 'completed', 'paused'];
 const BLANK_PROJECT = { name: '', description: '', techStack: '', repoUrl: '', liveUrl: '', status: 'planned' };
@@ -138,11 +138,11 @@ export default function Projects() {
       </div>
 
       <div className="board">
-        <div className="stat-strip">
-          <StatTile label="In flight" value={stats.ongoing} delta={`${projects.length} total projects`} />
-          <StatTile label="Shipped" value={stats.completed} delta="completed projects" up={stats.completed > 0} />
-          <StatTile label="Technologies" value={stats.tech} delta="across your stack" />
-          <StatTile label="Goals met" value={`${stats.goalsDone}/${goals.length || 0}`} delta="milestone-complete" up={stats.goalsDone > 0} />
+        <div className="stat-cards">
+          <StatTile feature icon={<IconFolder size={17} />} label="In flight" value={stats.ongoing} delta={`${projects.length} total projects`} />
+          <StatTile icon={<IconCheck size={17} />} label="Shipped" value={stats.completed} delta="completed projects" up={stats.completed > 0} />
+          <StatTile icon={<IconSpark size={17} />} label="Technologies" value={stats.tech} delta="across your stack" />
+          <StatTile icon={<IconTarget size={17} />} label="Goals met" value={`${stats.goalsDone}/${goals.length || 0}`} delta="milestone-complete" up={stats.goalsDone > 0} />
         </div>
 
         <div className="w-12 chip-list">

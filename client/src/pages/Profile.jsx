@@ -20,10 +20,25 @@ export default function Profile() {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const initials = user.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+
   return (
     <>
       <h1 className="page-title">Profile</h1>
       <p className="page-sub">Member since {new Date(user.createdAt).toLocaleDateString()}</p>
+
+      <div className="profile-hero">
+        <span className="profile-avatar">{initials}</span>
+        <div>
+          <div className="profile-name">{user.name}</div>
+          <div className="profile-mail">{user.email}</div>
+        </div>
+        {form.githubUsername && (
+          <a className="profile-gh" href={`https://github.com/${form.githubUsername}`} target="_blank" rel="noreferrer">
+            @{form.githubUsername}
+          </a>
+        )}
+      </div>
 
       <div className="card" style={{ maxWidth: 520 }}>
         <form onSubmit={save} className="stack" style={{ gap: 12 }}>

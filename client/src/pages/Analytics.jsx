@@ -6,6 +6,7 @@ import {
 import api from '../api';
 import StatTile from '../components/StatTile';
 import Heatmap from '../components/Heatmap';
+import { IconChart, IconCheck, IconBook, IconClock } from '../components/icons';
 import { SERIES, INK, GRID, AXIS, CURSOR, tooltipStyle } from '../chartTheme';
 
 export default function Analytics() {
@@ -66,11 +67,11 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="grid cols-4 mb-16">
-        <StatTile label="Productivity score" value={summary?.score ?? '–'} delta={`${summary?.activeDays ?? 0}/${summary?.range ?? 0} active days`} up />
-        <StatTile label="Tasks completed" value={summary?.tasksCompleted ?? '–'} delta={`${summary?.pendingTasks ?? 0} still pending`} />
-        <StatTile label="Learning hours" value={`${summary?.learningHours ?? '–'}h`} />
-        <StatTile label="Focus time" value={`${Math.round((summary?.codingMinutes ?? 0) / 60 * 10) / 10}h`} delta={`${summary?.focusSessions ?? 0} sessions`} />
+      <div className="stat-cards mb-16">
+        <StatTile feature icon={<IconChart size={17} />} label="Productivity score" value={summary?.score ?? '–'} delta={`${summary?.activeDays ?? 0}/${summary?.range ?? 0} active days`} up />
+        <StatTile icon={<IconCheck size={17} />} label="Tasks completed" value={summary?.tasksCompleted ?? '–'} delta={`${summary?.pendingTasks ?? 0} still pending`} />
+        <StatTile icon={<IconBook size={17} />} label="Learning hours" value={`${summary?.learningHours ?? '–'}h`} />
+        <StatTile icon={<IconClock size={17} />} label="Focus time" value={`${Math.round((summary?.codingMinutes ?? 0) / 60 * 10) / 10}h`} delta={`${summary?.focusSessions ?? 0} sessions`} />
       </div>
 
       <div className="card mb-16">

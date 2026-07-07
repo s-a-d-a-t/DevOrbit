@@ -4,7 +4,7 @@ import api from '../api';
 import ResourceLibrary from '../components/ResourceLibrary';
 import StatTile from '../components/StatTile';
 import Modal from '../components/Modal';
-import { IconBook, IconChart, IconSpark, IconPlus, IconEdit } from '../components/icons';
+import { IconBook, IconChart, IconSpark, IconPlus, IconEdit, IconClock, IconTarget } from '../components/icons';
 import { SERIES, INK, GRID, AXIS, CURSOR, tooltipStyle } from '../chartTheme';
 
 const todayISO = () => new Date().toLocaleDateString('en-CA');
@@ -105,11 +105,11 @@ export default function Learning() {
       </div>
 
       <div className="board">
-        <div className="stat-strip">
-          <StatTile label="Total logged" value={<>{stats.total}<em>h</em></>} delta={`across ${stats.days} days`} />
-          <StatTile label="This week" value={<>{stats.thisWeek}<em>h</em></>} delta={stats.thisWeek > 0 ? 'keep the rhythm' : 'no sessions yet'} up={stats.thisWeek > 0} />
-          <StatTile label="Sessions" value={stats.sessions} delta={`avg ${stats.sessions ? round1(stats.total / stats.sessions) : 0}h each`} />
-          <StatTile label="Avg difficulty" value={<>{stats.avgDiff}<em>/5</em></>} delta={stats.avgDiff >= 3.5 ? 'pushing hard' : 'comfortable zone'} />
+        <div className="stat-cards">
+          <StatTile feature icon={<IconBook size={17} />} label="Total logged" value={<>{stats.total}<em>h</em></>} delta={`across ${stats.days} days`} />
+          <StatTile icon={<IconClock size={17} />} label="This week" value={<>{stats.thisWeek}<em>h</em></>} delta={stats.thisWeek > 0 ? 'keep the rhythm' : 'no sessions yet'} up={stats.thisWeek > 0} />
+          <StatTile icon={<IconChart size={17} />} label="Sessions" value={stats.sessions} delta={`avg ${stats.sessions ? round1(stats.total / stats.sessions) : 0}h each`} />
+          <StatTile icon={<IconTarget size={17} />} label="Avg difficulty" value={<>{stats.avgDiff}<em>/5</em></>} delta={stats.avgDiff >= 3.5 ? 'pushing hard' : 'comfortable zone'} />
         </div>
 
         <div className="widget w-7">

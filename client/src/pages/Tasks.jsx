@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import StatTile from '../components/StatTile';
 import Modal from '../components/Modal';
-import { IconCheck, IconClock, IconTarget, IconPlus, IconEdit } from '../components/icons';
+import { IconCheck, IconClock, IconTarget, IconPlus, IconEdit, IconFlame, IconChart } from '../components/icons';
 
 const COLUMNS = [
   ['pending', 'Backlog'],
@@ -97,11 +97,11 @@ export default function Tasks() {
       </div>
 
       <div className="board">
-        <div className="stat-strip">
-          <StatTile label="Open" value={stats.open} delta={`${stats.doing} in motion`} />
-          <StatTile label="Overdue" value={stats.overdue} delta={stats.overdue ? 'clear these first' : 'all clear'} up={stats.overdue === 0} />
-          <StatTile label="Completed" value={stats.done} delta="all time" />
-          <StatTile label="Completion" value={<>{stats.rate}<em>%</em></>} delta={`${tasks.length} total tasks`} up={stats.rate >= 50} />
+        <div className="stat-cards">
+          <StatTile feature icon={<IconCheck size={17} />} label="Open" value={stats.open} delta={`${stats.doing} in motion`} />
+          <StatTile icon={<IconFlame size={17} />} label="Overdue" value={stats.overdue} delta={stats.overdue ? 'clear these first' : 'all clear'} up={stats.overdue === 0} />
+          <StatTile icon={<IconTarget size={17} />} label="Completed" value={stats.done} delta="all time" />
+          <StatTile icon={<IconChart size={17} />} label="Completion" value={<>{stats.rate}<em>%</em></>} delta={`${tasks.length} total tasks`} up={stats.rate >= 50} />
         </div>
 
         <div className="w-12 row-between" style={{ flexWrap: 'wrap', gap: 10 }}>
