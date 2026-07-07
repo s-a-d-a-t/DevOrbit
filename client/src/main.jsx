@@ -5,7 +5,7 @@ import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import '@fontsource-variable/inter';
-import '@fontsource-variable/space-grotesk';
+import '@fontsource-variable/sora';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/600.css';
 import '@fontsource/jetbrains-mono/700.css';

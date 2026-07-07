@@ -3,41 +3,41 @@
 const MONO = "'JetBrains Mono', ui-monospace, monospace";
 
 const THEMES = {
-  // WC26 daylight — validated (worst adjacent CVD ΔE 12.1, all ≥3:1 on #FFFFFF).
+  // Warm minimal — terracotta-led, distinguishable on warm cream (#FBF9F5).
   light: {
-    SERIES: ['#2B5FD9', '#177E3E', '#CC2B41', '#A16207', '#6D3FC4'],
-    INK: { primary: '#0F1728', secondary: '#333F54', muted: '#66718A' },
-    GRID: '#E7EAF0',
-    AXIS: '#C9D0DC',
-    SURFACE: '#FFFFFF',
-    // Sequential pitch-green ramp (level 0 recedes to the surface).
-    HEAT: ['#EAEEF2', '#B7E4C7', '#67C587', '#2FA35C', '#15713B'],
-    CURSOR: 'rgba(15, 23, 40, 0.05)',
+    SERIES: ['#BF5A35', '#5F7D57', '#B4792B', '#8A3A57', '#4E6E74'],
+    INK: { primary: '#211C16', secondary: '#453E34', muted: '#6C6355' },
+    GRID: '#E7DFD2',
+    AXIS: '#D3C9B9',
+    SURFACE: '#FBF9F5',
+    // Sequential terracotta ramp (level 0 recedes to the surface).
+    HEAT: ['#ECE5DA', '#E8C9A9', '#DC9A63', '#C6702F', '#9E4A1E'],
+    CURSOR: 'rgba(33, 28, 22, 0.05)',
     tooltipStyle: {
-      background: '#FFFFFF',
-      border: '1px solid #D7DDE6',
-      borderRadius: 8,
-      color: '#0F1728',
+      background: '#FBF9F5',
+      border: '1px solid #E1D8C9',
+      borderRadius: 10,
+      color: '#211C16',
       fontSize: 12.5,
       fontFamily: MONO,
-      boxShadow: '0 12px 32px -12px rgba(15, 23, 40, .25)',
+      boxShadow: '0 12px 32px -12px rgba(60, 45, 30, .22)',
     },
   },
-  // Industrial dark — validated (CVD ΔE 16.2, ≥3:1 on #1B1D21).
+  // Warm charcoal dark — terracotta-led, lighter tints on #211C16.
   dark: {
-    SERIES: ['#c08a1e', '#4f9e57', '#d95f26', '#5c8fd6', '#b04a5a'],
-    INK: { primary: '#F3F4F6', secondary: '#C7CBD1', muted: '#9CA3AF' },
-    GRID: '#26292e',
-    AXIS: '#33373d',
-    SURFACE: '#1B1D21',
-    // Sequential gold ramp (level 0 recedes to the surface).
-    HEAT: ['#22252a', '#55431c', '#7b5f22', '#a1802f', '#C9A86A'],
+    SERIES: ['#D77B50', '#8FB586', '#D9A95F', '#C98598', '#7FA6AD'],
+    INK: { primary: '#F1EBDF', secondary: '#D6CDBD', muted: '#A59A87' },
+    GRID: '#2C2619',
+    AXIS: '#3A3324',
+    SURFACE: '#211C16',
+    // Sequential terracotta/gold ramp (level 0 recedes to the surface).
+    HEAT: ['#282219', '#5A4222', '#8A5A2C', '#B77039', '#D77B50'],
     CURSOR: 'rgba(255, 255, 255, 0.04)',
     tooltipStyle: {
-      background: '#22252a',
-      border: '1px solid #3A4048',
-      borderRadius: 8,
-      color: '#F3F4F6',
+      background: '#282219',
+      border: '1px solid #40392D',
+      borderRadius: 10,
+      color: '#F1EBDF',
       fontSize: 12.5,
       fontFamily: MONO,
       boxShadow: '0 12px 32px -12px rgba(0,0,0,.7)',

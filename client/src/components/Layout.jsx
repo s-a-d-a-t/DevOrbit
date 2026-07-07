@@ -8,18 +8,25 @@ import {
   IconLogo, IconNote, IconSearch, IconChevron, IconSun, IconMoon, IconImage,
 } from './icons';
 
-const links = [
-  ['/', IconGrid, 'Dashboard'],
-  ['/tasks', IconCheck, 'Tasks'],
-  ['/notes', IconNote, 'Notes'],
-  ['/learning', IconBook, 'Learning'],
-  ['/skills', IconSpark, 'Skills'],
-  ['/projects', IconFolder, 'Projects'],
-  ['/analytics', IconChart, 'Analytics'],
-  ['/memories', IconImage, 'Memories'],
-  ['/profile', IconUser, 'Profile'],
+const groups = [
+  ['Workspace', [
+    ['/', IconGrid, 'Dashboard'],
+    ['/tasks', IconCheck, 'Tasks'],
+    ['/notes', IconNote, 'Notes'],
+    ['/learning', IconBook, 'Learning'],
+    ['/skills', IconSpark, 'Skills'],
+    ['/projects', IconFolder, 'Projects'],
+  ]],
+  ['Insights', [
+    ['/analytics', IconChart, 'Analytics'],
+    ['/memories', IconImage, 'Memories'],
+  ]],
+  ['Account', [
+    ['/profile', IconUser, 'Profile'],
+  ]],
 ];
 
+const links = groups.flatMap(([, items]) => items);
 const mobileLinks = links.filter(([to]) => ['/', '/tasks', '/notes', '/analytics', '/profile'].includes(to));
 
 export default function Layout() {
@@ -72,14 +79,18 @@ export default function Layout() {
           <kbd>⌘K</kbd>
         </button>
 
-        <div className="side-section">Workspace</div>
         <nav>
-          {links.map(([to, Icon, label]) => (
-            <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')} title={label}>
-              <Icon />
-              <span className="lbl">{label}</span>
-              {to === '/tasks' && dueCount > 0 && <span className="nav-badge">{dueCount}</span>}
-            </NavLink>
+          {groups.map(([title, items]) => (
+            <div className="nav-group" key={title}>
+              <div className="side-section">{title}</div>
+              {items.map(([to, Icon, label]) => (
+                <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')} title={label}>
+                  <Icon />
+                  <span className="lbl">{label}</span>
+                  {to === '/tasks' && dueCount > 0 && <span className="nav-badge">{dueCount}</span>}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
