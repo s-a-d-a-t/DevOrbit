@@ -104,3 +104,12 @@ export const IconGitHub = ({ size = 18 }) => (
 export const IconMail = (p) => (
   <I {...p}><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m4 7.5 8 6 8-6" /></I>
 );
+export const IconArrowUpRight = (p) => (
+  <I {...p}><path d="M7 17 17 7" /><path d="M8 7h9v9" /></I>
+);
+export const IconStop = (p) => (
+  <I {...p}><rect x="6" y="6" width="12" height="12" rx="2.5" /></I>
+);
+export const IconClose = (p) => (
+  <I {...p}><path d="M6 6l12 12M18 6 6 18" /></I>
+);

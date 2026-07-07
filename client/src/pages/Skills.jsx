@@ -2,83 +2,150 @@ import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import StatTile from '../components/StatTile';
 import Modal from '../components/Modal';
-import { IconSpark, IconPlus, IconEdit } from '../components/icons';
+import { IconSpark, IconPlus, IconEdit, IconFolder, IconChart, IconFlame } from '../components/icons';
 
 const LEVELS = ['beginner', 'intermediate', 'advanced', 'expert'];
 const BLANK = { name: '', level: 'beginner', progress: 10, category: '' };
 
-/* tiny inline history sparkline */
+/* circular progress ring */
+function Ring({ value, size = 72, stroke = 7 }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const off = c * (1 - Math.min(100, Math.max(0, value)) / 100);
+  const id = `ring-${size}`;
+  return (
+    <svg width={size} height={size} className="ring" aria-hidden>
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="var(--gold-strong)" />
+          <stop offset="1" stopColor="var(--gold)" />
+        </linearGradient>
+      </defs>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth={stroke} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke={`url(#${id})`} strokeWidth={stroke} strokeLinecap="round"
+        strokeDasharray={c} strokeDashoffset={off}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dashoffset 0.6s var(--ease)' }}
+      />
+      <text x="50%" y="50%" dy="0.34em" textAnchor="middle" className="ring-text">{value}</text>
+    </svg>
+  );
+}
+
+/* beginner → expert ladder */
+function LevelLadder({ level }) {
+  const idx = LEVELS.indexOf(level);
+  return (
+    <div className="ladder" title={level}>
+      {LEVELS.map((l, i) => (
+        <span key={l} className={`rung${i <= idx ? ' on' : ''}`} />
+      ))}
+    </div>
+  );
+}
+
+/* history trend sparkline */
 function Sparkline({ history }) {
   if (!history || history.length < 2) return null;
-  const w = 120, h = 30, pad = 2;
+  const w = 116, h = 34, pad = 3;
   const vals = history.map((p) => p.progress);
   const min = Math.min(...vals), max = Math.max(...vals);
   const span = max - min || 1;
-  const pts = vals
-    .map((v, i) => `${pad + (i / (vals.length - 1)) * (w - pad * 2)},${h - pad - ((v - min) / span) * (h - pad * 2)}`)
-    .join(' ');
+  const xy = (v, i) => [pad + (i / (vals.length - 1)) * (w - pad * 2), h - pad - ((v - min) / span) * (h - pad * 2)];
+  const line = vals.map((v, i) => xy(v, i).join(',')).join(' ');
+  const [lx, ly] = xy(vals[vals.length - 1], vals.length - 1);
+  const area = `${pad},${h} ${line} ${w - pad},${h}`;
   return (
     <svg width={w} height={h} className="spark" aria-hidden>
-      <polyline points={pts} fill="none" stroke="var(--gold)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
+      <defs>
+        <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="var(--gold)" stopOpacity="0.22" />
+          <stop offset="1" stopColor="var(--gold)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={area} fill="url(#spark-fill)" />
+      <polyline points={line} fill="none" stroke="var(--gold)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={lx} cy={ly} r="2.6" fill="var(--gold)" />
     </svg>
   );
 }
 
 function SkillCard({ s, projects, projectName, update, onEdit, onDelete }) {
   const [draft, setDraft] = useState(s.progress);
+  const [tuning, setTuning] = useState(false);
   const dirty = draft !== s.progress;
+  const trend = (() => {
+    const h = s.history || [];
+    if (h.length < 2) return null;
+    return s.progress - h[0].progress;
+  })();
+
+  const commit = () => { update(s, { progress: draft }); setTuning(false); };
 
   return (
-    <div className="widget">
-      <div className="row-between">
-        <div>
-          <div style={{ fontFamily: 'var(--display)', fontWeight: 700, fontSize: 16 }}>{s.name}</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--dim)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>
-            {s.level} · since {new Date(s.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
-            {s.history?.length > 1 && ` · ${s.history.length} checkpoints`}
+    <div className="skill-card">
+      <div className="skill-card-top">
+        <Ring value={draft} />
+        <div className="skill-meta">
+          <div className="skill-name">{s.name}</div>
+          <LevelLadder level={s.level} />
+          <div className="skill-sub">
+            <span className="cap">{s.level}</span>
+            <span className="dot">·</span>
+            since {new Date(s.createdAt).toLocaleDateString(undefined, { month: 'short', year: '2-digit' })}
+            {trend != null && trend !== 0 && (
+              <span className={`trend ${trend > 0 ? 'up' : 'down'}`}>{trend > 0 ? '▲' : '▼'} {Math.abs(trend)}</span>
+            )}
           </div>
         </div>
         <span className="row-actions">
-          <Sparkline history={s.history} />
           <button className="icon-act" onClick={onEdit} title="Edit skill"><IconEdit size={15} /></button>
           <button className="icon-act del" onClick={onDelete} title="Delete skill">✕</button>
         </span>
       </div>
 
-      <div style={{ margin: '16px 0 14px' }}>
-        <label>Linked projects</label>
-        <select onChange={(e) => e.target.value && update(s, { projects: [...(s.projects || []), +e.target.value] })} value="">
-          <option value="">+ link a project…</option>
+      {s.history?.length > 1 && (
+        <div className="skill-spark"><Sparkline history={s.history} /></div>
+      )}
+
+      <div className="skill-projects">
+        {(s.projects || []).map((pid) => projectName(pid) && (
+          <span key={pid} className="badge tag">{projectName(pid)}</span>
+        ))}
+        <select
+          className="link-select"
+          onChange={(e) => e.target.value && update(s, { projects: [...(s.projects || []), +e.target.value] })}
+          value=""
+        >
+          <option value="">+ link project</option>
           {projects.filter((p) => !s.projects?.includes(p.id)).map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
       </div>
-      {s.projects?.length > 0 && (
-        <div className="chip-list" style={{ marginBottom: 14 }}>
-          {s.projects.map((pid) => projectName(pid) && <span key={pid} className="badge tag">{projectName(pid)}</span>)}
-        </div>
-      )}
 
-      <div className="row-between" style={{ marginBottom: 6 }}>
-        <label style={{ margin: 0 }}>Progress</label>
-        <strong style={{ fontFamily: 'var(--mono)', fontSize: 15, color: dirty ? 'var(--gold)' : 'inherit' }}>{draft}%</strong>
-      </div>
-      <div className="progress"><div style={{ width: `${draft}%` }} /></div>
-      <input
-        type="range" min="0" max="100" value={draft}
-        onChange={(e) => setDraft(+e.target.value)}
-        style={{ marginTop: 10, padding: 0, accentColor: 'var(--gold)' }}
-        aria-label={`${s.name} progress percentage`}
-      />
-      <div className="hint">
-        Drag to your current mastery, then <strong>save</strong> — every save is recorded as a checkpoint
-        and drawn on the trend line and in Analytics.
-      </div>
-      {dirty && (
-        <div className="row-between mt-8" style={{ justifyContent: 'flex-end', gap: 8 }}>
-          <button className="ghost small" onClick={() => setDraft(s.progress)}>Reset</button>
-          <button className="small" onClick={() => update(s, { progress: draft })}>Save {draft}%</button>
+      {!tuning ? (
+        <button className="ghost small tune-btn" onClick={() => { setDraft(s.progress); setTuning(true); }}>
+          Update mastery
+        </button>
+      ) : (
+        <div className="tune">
+          <div className="row-between" style={{ marginBottom: 8 }}>
+            <label style={{ margin: 0 }}>Mastery</label>
+            <strong style={{ fontFamily: 'var(--mono)', fontSize: 15, color: dirty ? 'var(--gold)' : 'inherit' }}>{draft}%</strong>
+          </div>
+          <input
+            type="range" min="0" max="100" value={draft}
+            onChange={(e) => setDraft(+e.target.value)}
+            style={{ padding: 0, accentColor: 'var(--gold)' }}
+            aria-label={`${s.name} mastery percentage`}
+          />
+          <div className="row-between mt-8" style={{ justifyContent: 'flex-end', gap: 8 }}>
+            <button className="ghost small" onClick={() => setTuning(false)}>Cancel</button>
+            <button className="small" onClick={commit} disabled={!dirty}>Save checkpoint</button>
+          </div>
         </div>
       )}
     </div>
@@ -90,6 +157,7 @@ export default function Skills() {
   const [projects, setProjects] = useState([]);
   const [editing, setEditing] = useState(null); // null | 'new' | skill
   const [form, setForm] = useState(BLANK);
+  const [filter, setFilter] = useState('all');
 
   const load = () => {
     api.get('/skills').then((r) => setSkills(r.data));
@@ -142,8 +210,19 @@ export default function Skills() {
       if (!map.has(c)) map.set(c, []);
       map.get(c).push(s);
     }
-    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+    return [...map.entries()]
+      .map(([name, items]) => ({
+        name,
+        items,
+        avg: Math.round(items.reduce((a, s) => a + s.progress, 0) / items.length),
+      }))
+      .sort((a, b) => b.avg - a.avg);
   }, [skills]);
+
+  const visible = useMemo(() => {
+    const list = filter === 'all' ? skills : skills.filter((s) => (s.category || 'general') === filter);
+    return [...list].sort((a, b) => b.progress - a.progress);
+  }, [skills, filter]);
 
   return (
     <>
@@ -156,21 +235,48 @@ export default function Skills() {
       </div>
 
       <div className="board">
-        <div className="stat-strip">
-          <StatTile label="Tracked" value={stats.count} delta={`${categories.length} categories`} />
-          <StatTile label="Avg progress" value={<>{stats.avg}<em>%</em></>} delta="across the stack" />
-          <StatTile label="Strongest" value={stats.top?.name ?? '–'} delta={stats.top ? `${stats.top.progress}% · ${stats.top.level}` : ''} />
-          <StatTile label="Improving" value={stats.improving} delta="up in the last 30 days" up={stats.improving > 0} />
+        <div className="stat-cards">
+          <StatTile feature icon={<IconSpark size={17} />} label="Tracked" value={stats.count} delta={`${categories.length} categories`} />
+          <StatTile icon={<IconChart size={17} />} label="Avg mastery" value={<>{stats.avg}<em>%</em></>} delta="across the stack" />
+          <StatTile icon={<IconFlame size={17} />} label="Strongest" value={stats.top?.name ?? '–'} delta={stats.top ? `${stats.top.progress}% · ${stats.top.level}` : ''} />
+          <StatTile icon={<IconFolder size={17} />} label="Improving" value={stats.improving} delta="up in the last 30 days" up={stats.improving > 0} />
         </div>
 
-        {categories.map(([cat, items]) => (
-          <div key={cat} className="w-12">
-            <div className="res-cat-head" style={{ marginBottom: 12 }}>
-              <span className="name" style={{ textTransform: 'capitalize' }}>{cat}</span>
-              <span className="count">{items.length} · avg {Math.round(items.reduce((a, s) => a + s.progress, 0) / items.length)}%</span>
+        {categories.length > 0 && (
+          <div className="widget w-12">
+            <h3><IconChart size={15} /> Mastery by category</h3>
+            <div className="cat-bars">
+              {categories.map((c) => (
+                <button
+                  key={c.name}
+                  className={`cat-bar${filter === c.name ? ' on' : ''}`}
+                  onClick={() => setFilter(filter === c.name ? 'all' : c.name)}
+                >
+                  <div className="cat-bar-head">
+                    <span className="cat-name">{c.name}</span>
+                    <span className="cat-val">{c.avg}%<em>· {c.items.length}</em></span>
+                  </div>
+                  <div className="progress"><div style={{ width: `${c.avg}%` }} /></div>
+                </button>
+              ))}
             </div>
-            <div className="grid cols-2">
-              {items.map((s) => (
+          </div>
+        )}
+
+        {skills.length > 0 && (
+          <div className="w-12">
+            <div className="chip-list filter-row">
+              <button className={`chip${filter === 'all' ? ' on' : ''}`} onClick={() => setFilter('all')}>
+                All · {skills.length}
+              </button>
+              {categories.map((c) => (
+                <button key={c.name} className={`chip${filter === c.name ? ' on' : ''}`} onClick={() => setFilter(c.name)}>
+                  {c.name} · {c.items.length}
+                </button>
+              ))}
+            </div>
+            <div className="skill-grid">
+              {visible.map((s) => (
                 <SkillCard
                   key={`${s.id}-${s.progress}`}
                   s={s}
@@ -183,15 +289,18 @@ export default function Skills() {
               ))}
             </div>
           </div>
-        ))}
-        {skills.length === 0 && <div className="widget w-12"><div className="empty">No skills tracked yet — add your first with the button above.</div></div>}
+        )}
+
+        {skills.length === 0 && (
+          <div className="widget w-12"><div className="empty">No skills tracked yet — add your first with the button above.</div></div>
+        )}
       </div>
 
       <Modal
         open={editing !== null}
         onClose={close}
         title={editing === 'new' ? 'Track a skill' : 'Edit skill'}
-        sub={editing === 'new' ? 'Name it, categorize it, set a starting point.' : 'Progress is edited on the card itself.'}
+        sub={editing === 'new' ? 'Name it, categorize it, set a starting point.' : 'Mastery is edited on the card itself.'}
       >
         <form onSubmit={save}>
           <div className="form-row" style={{ marginBottom: 12 }}>
@@ -202,7 +311,7 @@ export default function Skills() {
             <div>
               <label>Category</label>
               <input placeholder="frontend, dsa…" list="skill-cats" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
-              <datalist id="skill-cats">{categories.map(([c]) => <option key={c} value={c} />)}</datalist>
+              <datalist id="skill-cats">{categories.map((c) => <option key={c.name} value={c.name} />)}</datalist>
             </div>
           </div>
           <div className="form-row">

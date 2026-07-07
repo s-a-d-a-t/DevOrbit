@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip } from 'recharts';
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, Cell,
+  RadialBarChart, RadialBar, PolarAngleAxis,
+} from 'recharts';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import StatTile from '../components/StatTile';
 import Heatmap from '../components/Heatmap';
 import {
   IconTarget, IconRepeat, IconBell, IconFlame, IconClock, IconLink, IconNote,
-  IconSpark, IconChart, IconFolder,
+  IconSpark, IconChart, IconFolder, IconCheck, IconBook, IconStop, IconClose,
 } from '../components/icons';
-import { SERIES, INK, CURSOR, tooltipStyle } from '../chartTheme';
+import { SERIES, INK, GRID, CURSOR, tooltipStyle } from '../chartTheme';
 
 /* ---- focus timer ---- */
 function FocusTimer({ onLogged }) {
@@ -47,10 +50,10 @@ function FocusTimer({ onLogged }) {
   const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   return (
-    <div className="widget w-4">
-      <h3><IconClock size={15} /> Current focus</h3>
+    <div className={`widget w-4${secondsLeft === null ? '' : ' time-tracker'}`}>
       {secondsLeft === null ? (
         <>
+          <h3><IconClock size={15} /> Current focus</h3>
           <div className="form-row mb-16">
             <div style={{ flex: 2 }}>
               <label>Session</label>
@@ -67,10 +70,16 @@ function FocusTimer({ onLogged }) {
         </>
       ) : (
         <>
+          <h3><IconClock size={15} /> Time tracker</h3>
+          <div className="tt-label">{label}</div>
           <div className="timer-display">{fmt(secondsLeft)}</div>
-          <div className="form-row">
-            <button className="ghost" onClick={() => stop(true)}>Stop &amp; log</button>
-            <button className="danger" onClick={() => stop(false)}>Discard</button>
+          <div className="tt-controls">
+            <button className="tt-btn log" onClick={() => stop(true)} title="Stop &amp; log" aria-label="Stop and log">
+              <IconStop size={18} />
+            </button>
+            <button className="tt-btn discard" onClick={() => stop(false)} title="Discard" aria-label="Discard">
+              <IconClose size={18} />
+            </button>
           </div>
         </>
       )}
@@ -115,6 +124,33 @@ function QuickNote() {
       <textarea placeholder="Scratch anything — it autosaves to your Notes." value={text} onChange={(e) => onChange(e.target.value)} />
       <div className="mt-8" style={{ textAlign: 'right' }}>
         <Link to="/notes">Open editor →</Link>
+      </div>
+    </div>
+  );
+}
+
+/* ---- radial progress gauge ---- */
+function ProgressGauge({ done, pending }) {
+  const total = done + pending;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return (
+    <div className="widget w-4">
+      <h3><IconTarget size={15} /> Task progress · 7d</h3>
+      <div className="gauge">
+        <ResponsiveContainer width="100%" height={168}>
+          <RadialBarChart data={[{ value: pct }]} innerRadius="74%" outerRadius="100%" startAngle={220} endAngle={-40} barSize={16}>
+            <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+            <RadialBar dataKey="value" cornerRadius={12} fill={SERIES[0]} background={{ fill: GRID }} />
+          </RadialBarChart>
+        </ResponsiveContainer>
+        <div className="gauge-center">
+          <div className="gauge-value">{pct}%</div>
+          <div className="gauge-sub">completed</div>
+        </div>
+      </div>
+      <div className="gauge-legend">
+        <span><i style={{ background: SERIES[0] }} />{done} done</span>
+        <span><i style={{ background: GRID }} />{pending} pending</span>
       </div>
     </div>
   );
@@ -169,6 +205,7 @@ export default function Dashboard() {
     return out;
   })();
 
+  const peak = Math.max(0, ...week.map((w) => w.score));
   const recent = [...heatmap].reverse().filter((h) => h.score > 0).slice(0, 6);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
@@ -186,12 +223,12 @@ export default function Dashboard() {
       </div>
 
       <div className="board">
-        <div className="stat-strip">
-          <StatTile label="Streak" value={streak ? <>{streak.current}<em>days</em></> : <span className="skeleton" style={{ display: 'inline-block', width: 50 }} />} delta={streak ? `longest ${streak.longest}` : ''} up={streak?.current > 0} />
-          <StatTile label="Tasks · 7d" value={summary?.tasksCompleted ?? '–'} delta={`${summary?.pendingTasks ?? 0} pending`} />
-          <StatTile label="Study · 7d" value={summary ? <>{summary.learningHours}<em>h</em></> : '–'} delta={`goal ${user.dailyGoalHours}h/day`} />
-          <StatTile label="Focus · 7d" value={summary ? <>{Math.round(summary.codingMinutes / 6) / 10}<em>h</em></> : '–'} delta={`${summary?.focusSessions ?? 0} sessions`} />
-          <StatTile label="Score · 7d" value={summary?.score ?? '–'} delta={`${summary?.activeDays ?? 0}/7 active days`} up />
+        <div className="stat-cards">
+          <StatTile feature icon={<IconFlame size={17} />} label="Streak" value={streak ? <>{streak.current}<em>days</em></> : <span className="skeleton" style={{ display: 'inline-block', width: 50 }} />} delta={streak ? `longest ${streak.longest}` : ''} up={streak?.current > 0} />
+          <StatTile icon={<IconCheck size={17} />} label="Tasks · 7d" value={summary?.tasksCompleted ?? '–'} delta={`${summary?.pendingTasks ?? 0} pending`} />
+          <StatTile icon={<IconBook size={17} />} label="Study · 7d" value={summary ? <>{summary.learningHours}<em>h</em></> : '–'} delta={`goal ${user.dailyGoalHours}h/day`} />
+          <StatTile icon={<IconClock size={17} />} label="Focus · 7d" value={summary ? <>{Math.round(summary.codingMinutes / 6) / 10}<em>h</em></> : '–'} delta={`${summary?.focusSessions ?? 0} sessions`} />
+          <StatTile icon={<IconChart size={17} />} label="Score · 7d" value={summary?.score ?? '–'} delta={`${summary?.activeDays ?? 0}/7 active days`} up />
         </div>
 
         <div className="widget w-8">
@@ -203,6 +240,26 @@ export default function Dashboard() {
         </div>
 
         <FocusTimer onLogged={load} />
+
+        <div className="widget w-8">
+          <div className="row-between" style={{ marginBottom: 14 }}>
+            <h3 style={{ margin: 0 }}><IconChart size={15} /> Weekly rhythm</h3>
+            <span className="chart-note">peak {peak}</span>
+          </div>
+          <ResponsiveContainer width="100%" height={168}>
+            <BarChart data={week} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+              <XAxis dataKey="day" stroke="none" tick={{ fill: INK.muted, fontSize: 10.5, fontFamily: 'JetBrains Mono' }} tickLine={false} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: CURSOR }} />
+              <Bar dataKey="score" name="Score" radius={[9, 9, 9, 9]} maxBarSize={30}>
+                {week.map((w, i) => (
+                  <Cell key={i} fill={w.score === peak && peak > 0 ? SERIES[0] : GRID} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <ProgressGauge done={summary?.tasksCompleted ?? 0} pending={summary?.pendingTasks ?? 0} />
 
         <div className="widget w-5">
           <h3><IconTarget size={15} /> Today's plan</h3>
@@ -231,17 +288,6 @@ export default function Dashboard() {
           <form onSubmit={addHabit} className="form-row mt-8">
             <input placeholder="New habit" value={newHabit} onChange={(e) => setNewHabit(e.target.value)} />
           </form>
-        </div>
-
-        <div className="widget w-4">
-          <h3><IconChart size={15} /> Weekly rhythm</h3>
-          <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={week} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
-              <XAxis dataKey="day" stroke="none" tick={{ fill: INK.muted, fontSize: 10.5, fontFamily: 'JetBrains Mono' }} tickLine={false} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: CURSOR }} />
-              <Bar dataKey="score" name="Score" fill={SERIES[0]} radius={[4, 4, 0, 0]} maxBarSize={22} />
-            </BarChart>
-          </ResponsiveContainer>
         </div>
 
         <div className="widget w-4">
@@ -284,7 +330,7 @@ export default function Dashboard() {
         </div>
 
         {reminders.length > 0 && (
-          <div className="widget w-5">
+          <div className="widget w-4">
             <h3><IconBell size={15} /> Upcoming deadlines</h3>
             {reminders.slice(0, 5).map((t) => (
               <div key={t.id} className="item-row">
@@ -298,7 +344,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        <div className={`widget ${reminders.length > 0 ? 'w-7' : 'w-6'}`}>
+        <div className={`widget ${reminders.length > 0 ? 'w-6' : 'w-4'}`}>
           <div className="row-between" style={{ marginBottom: 14 }}>
             <h3 style={{ margin: 0 }}><IconLink size={15} /> Library</h3>
             <Link to="/learning">Manage →</Link>
@@ -320,7 +366,7 @@ export default function Dashboard() {
           {resources.length === 0 && <div className="empty">No saved resources yet.</div>}
         </div>
 
-        <div className={`widget ${reminders.length > 0 ? 'w-12' : 'w-6'}`}>
+        <div className={`widget ${reminders.length > 0 ? 'w-6' : 'w-12'}`}>
           <h3><IconClock size={15} /> Recent activity</h3>
           <div className="feed">
             {recent.map((h) => (
