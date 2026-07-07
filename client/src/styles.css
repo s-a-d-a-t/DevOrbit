@@ -551,6 +551,17 @@ a:hover { color: var(--gold-strong); }
 .stat-card.feature .stat-card-arrow { border-color: rgba(255, 255, 255, 0.35); color: rgba(255, 255, 255, 0.9); }
 .stat-card.feature:hover .stat-card-arrow { color: var(--on-accent); border-color: rgba(255, 255, 255, 0.7); }
 
+/* compact inline stat chips (e.g. Memories header) */
+.stat-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.stat-mini {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 9px 15px;
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: var(--r-md); box-shadow: var(--lift);
+}
+.stat-mini .v { font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat-mini .l { font-family: var(--mono); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--slate); }
+
 /* ---------------------------------------------------------------
    radial progress gauge
    --------------------------------------------------------------- */

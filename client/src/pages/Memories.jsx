@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import DomeGallery from '../components/DomeGallery';
 import Modal from '../components/Modal';
-import StatTile from '../components/StatTile';
 import { useTheme } from '../context/ThemeContext';
 import { IconImage, IconPlus, IconEdit } from '../components/icons';
 
@@ -79,12 +78,10 @@ export default function Memories() {
         </div>
       ) : (
         <>
-          <div className="board" style={{ marginBottom: 14 }}>
-            <div className="stat-strip">
-              <StatTile label="Captured" value={memories.length} delta="moments logged" />
-              <StatTile label="On the dome" value={images.length} delta="with a photo" />
-              <StatTile label="Since" value={span} delta="your earliest memory" />
-            </div>
+          <div className="stat-row">
+            <div className="stat-mini"><span className="v">{memories.length}</span><span className="l">captured</span></div>
+            <div className="stat-mini"><span className="v">{images.length}</span><span className="l">on the dome</span></div>
+            <div className="stat-mini"><span className="v">{span}</span><span className="l">since</span></div>
           </div>
 
           <div className="dome-wrap">
