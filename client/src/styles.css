@@ -1058,10 +1058,30 @@ button.icon-btn.on { color: var(--gold); background: var(--gold-wash); }
 /* ---------------------------------------------------------------
    landing — editorial
    --------------------------------------------------------------- */
-.landing { overflow-x: hidden; }
+.landing { overflow-x: hidden; position: relative; }
 /* WC26 signature — host-trio ribbon (light theme only) */
-.landing::before { content: ''; display: block; height: 3px; background: var(--tricolor); }
+.landing::before { content: ''; display: block; height: 3px; background: var(--tricolor); position: relative; z-index: 2; }
 :root[data-theme='dark'] .landing::before { display: none; }
+
+/* GridMotion animated hero backdrop */
+.landing-bg {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.6;
+}
+/* scrim: keep the grid off the headline, and fade it into the page below */
+.landing-bg::after {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(72% 58% at 28% 42%, var(--bg) 0%, transparent 66%),
+    linear-gradient(to bottom, transparent 58%, var(--bg) 97%);
+}
+/* every direct child of .landing sits above the backdrop */
+.landing > *:not(.landing-bg) { position: relative; z-index: 1; }
 .landing-inner { max-width: 1140px; margin: 0 auto; padding: 0 26px; }
 .landing-nav {
   display: flex; align-items: center; justify-content: space-between;
@@ -1150,25 +1170,12 @@ button.icon-btn.on { color: var(--gold); background: var(--gold-wash); }
 }
 
 .timeline-sec { padding: 60px 0 90px; }
-.timeline-sec h2, .testi-sec h2 { font-size: clamp(24px, 3vw, 32px); font-weight: 700; letter-spacing: -0.025em; margin: 12px 0 36px; }
+.timeline-sec h2 { font-size: clamp(24px, 3vw, 32px); font-weight: 700; letter-spacing: -0.025em; margin: 12px 0 36px; }
 .timeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0; border-left: 1px solid var(--hairline); }
 .tl-step { border-right: 1px solid var(--hairline); padding: 22px 24px 6px; position: relative; }
 .tl-step .time { font-family: var(--mono); font-size: 11px; color: var(--gold); }
 .tl-step h4 { font-family: var(--display); font-size: 15px; margin: 8px 0 6px; }
 .tl-step p { color: var(--slate); font-size: 12.5px; line-height: 1.6; }
-
-.testi-sec { padding: 20px 0 90px; }
-.testi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
-.testi {
-  border: 1px solid var(--hairline); border-radius: var(--r-lg);
-  background: var(--surface); box-shadow: var(--lift);
-  padding: 24px;
-}
-.testi q { font-size: 14px; color: var(--silver); line-height: 1.7; quotes: '\201C' '\201D'; }
-.testi q::before, .testi q::after { color: var(--gold); font-family: var(--display); }
-.testi .who { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
-.testi .who .nm { font-weight: 600; font-size: 12.5px; }
-.testi .who .rl { font-family: var(--mono); font-size: 10.5px; color: var(--dim); }
 
 .landing-footer {
   border-top: 1px solid var(--hairline);

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { HEAT } from '../chartTheme';
 import { useTheme } from '../context/ThemeContext';
 import { IconLogo, IconGitHub, IconMail, IconSun, IconMoon } from '../components/icons';
+import GridMotion from '../components/GridMotion';
 
 /* reveal-on-scroll */
 function useReveal() {
@@ -66,10 +67,12 @@ const TIMELINE = [
   ['18:00', 'Reflect', 'A note, a habit check, and the day lights up another cell on the calendar.'],
 ];
 
-const TESTIMONIALS = [
-  ['The first tracker that feels like a tool, not a toy. The activity calendar is what finally made studying stick.', 'Amara O.', 'CS senior, class of 2026'],
-  ['I replaced four apps with this. Tasks, notes, focus timing and skills in one place — and it looks like it belongs on my machine.', 'Daniel K.', 'Backend engineer'],
-  ['Watching the skill graphs climb over a semester is absurdly motivating. My streak is 63 days and counting.', 'Priya S.', 'Self-taught developer'],
+/* thematic tokens for the animated hero backdrop */
+const GRID_ITEMS = [
+  'git commit', 'Tasks', '21d streak', 'Focus', 'SELECT *', 'Skills', 'deep work',
+  'Notes', '12.5h', 'Habits', 'Analytics', 'npm run dev', 'Goals', 'Projects',
+  'Learning', 'score 449', 'Memories', 'const', 'ship it', 'PostgreSQL', 'React',
+  'Node.js', 'JWT', 'streak', 'today plan', 'reviews', 'done ✓', 'contribute',
 ];
 
 export default function Landing() {
@@ -77,6 +80,10 @@ export default function Landing() {
   const { theme, toggleTheme } = useTheme();
   return (
     <div className="landing">
+      <div className="landing-bg" aria-hidden>
+        <GridMotion items={GRID_ITEMS} gradientColor="var(--forest-wash)" />
+      </div>
+
       <div className="landing-inner">
         <header className="landing-nav">
           <div className="logo">
@@ -197,21 +204,6 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="testi-sec reveal">
-          <span className="eyebrow">From the workbench</span>
-          <h2>Developers keep it open all day.</h2>
-          <div className="testi-grid">
-            {TESTIMONIALS.map(([quote, name, role]) => (
-              <div key={name} className="testi">
-                <q>{quote}</q>
-                <div className="who">
-                  <span className="avatar">{name.split(' ').map((w) => w[0]).join('')}</span>
-                  <span><div className="nm">{name}</div><div className="rl">{role}</div></span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
 
       <footer className="landing-footer">
