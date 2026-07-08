@@ -1,19 +1,43 @@
-// Minimal 18px stroke icon set — inherits currentColor.
+// ============================================================================
+// icons.jsx  —  OUR HAND-DRAWN SVG ICON SET
+// ----------------------------------------------------------------------------
+// Rather than pull in a big icon library, we draw each icon inline as an SVG.
+// An icon is just an <svg> with some <path>/<rect>/<circle> shapes inside it.
+//
+// THE KEY IDEA (read this once and every icon below makes sense):
+//   `I` is a shared wrapper component that provides the identical <svg> boilerplate
+//   for every icon — size, the 24×24 coordinate system (viewBox), rounded strokes,
+//   etc. Each exported IconXxx just supplies the SHAPES that go inside that wrapper.
+//   So we write the common setup ONCE and each icon stays a single readable line.
+//
+// TWO THINGS WORTH KNOWING:
+//   - stroke="currentColor": the icon automatically takes the text color of
+//     whatever element contains it. Change the CSS `color` and the icon recolors.
+//   - Every icon accepts a `size` prop (default 18) and forwards it to `I`.
+//     `(p) => <I {...p}>...` means "pass all incoming props straight through".
+// ============================================================================
+
+// The shared SVG wrapper. `children` are the shapes; `size` sets width & height.
 const I = ({ children, size = 18 }) => (
   <svg
     width={size}
     height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
+    viewBox="0 0 24 24"        // internal coordinate grid all shapes are drawn on
+    fill="none"                // outline icons, not filled
+    stroke="currentColor"      // line color = surrounding text color
     strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
+    strokeLinecap="round"      // rounded line ends...
+    strokeLinejoin="round"     // ...and rounded corners, for a soft look
+    aria-hidden                // decorative: hide from screen readers
   >
     {children}
   </svg>
 );
+
+// --- The icons ---------------------------------------------------------------
+// Each one follows the same recipe: spread props into <I>, then draw its shapes.
+// The `d="..."` on a <path> is SVG's drawing language (M = move, L = line, etc.).
+// You rarely read these by hand — the names tell you what each icon depicts.
 
 export const IconGrid = (p) => (
   <I {...p}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></I>
@@ -96,6 +120,9 @@ export const IconSun = (p) => (
 export const IconMoon = (p) => (
   <I {...p}><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" /></I>
 );
+// IconGitHub is the exception: the GitHub logo is a SOLID (filled) shape, not an
+// outline, so it can't use the outline-only `I` wrapper — it defines its own <svg>
+// with fill="currentColor" instead of stroke.
 export const IconGitHub = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <path d="M12 1.5A10.5 10.5 0 0 0 8.68 21.96c.53.1.72-.23.72-.5v-1.96c-2.92.63-3.54-1.24-3.54-1.24-.48-1.21-1.17-1.54-1.17-1.54-.95-.65.07-.64.07-.64 1.06.08 1.61 1.08 1.61 1.08.94 1.6 2.46 1.14 3.06.87.1-.68.37-1.14.66-1.4-2.33-.27-4.79-1.17-4.79-5.2 0-1.14.41-2.08 1.08-2.81-.1-.27-.47-1.34.1-2.79 0 0 .89-.28 2.9 1.08a10.1 10.1 0 0 1 5.29 0c2.01-1.36 2.9-1.08 2.9-1.08.57 1.45.2 2.52.1 2.79.67.73 1.08 1.67 1.08 2.81 0 4.04-2.46 4.93-4.81 5.19.38.33.72.97.72 1.96v2.9c0 .28.19.61.73.5A10.5 10.5 0 0 0 12 1.5Z" />

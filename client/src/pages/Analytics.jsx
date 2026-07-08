@@ -1,3 +1,12 @@
+// ============================================================================
+// Analytics.jsx  —  CHARTS DASHBOARD (mostly read-only visualizations)
+// ----------------------------------------------------------------------------
+// Unlike the CRUD pages, this one only READS data and draws charts with recharts.
+// The most instructive part is `skillSeries` below: reshaping many skills' separate
+// history timelines into ONE table the multi-line chart can plot — a common and
+// genuinely tricky "data wrangling" task you'll meet often in real dashboards.
+// ============================================================================
+
 import { useEffect, useMemo, useState } from 'react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -10,8 +19,9 @@ import { IconChart, IconCheck, IconBook, IconClock } from '../components/icons';
 import { SERIES, INK, GRID, AXIS, CURSOR, tooltipStyle } from '../chartTheme';
 
 export default function Analytics() {
+  // Shared axis styling reused by every chart, spread in with {...axisProps}.
   const axisProps = { stroke: AXIS, tick: { fill: INK.muted, fontSize: 12 }, tickLine: false };
-  const [range, setRange] = useState('week');
+  const [range, setRange] = useState('week');       // 'week' | 'month' — drives the summary
   const [summary, setSummary] = useState(null);
   const [studyHours, setStudyHours] = useState([]);
   const [breakdown, setBreakdown] = useState(null);
@@ -19,10 +29,13 @@ export default function Analytics() {
   const [heatmap, setHeatmap] = useState([]);
   const [streak, setStreak] = useState(null);
 
+  // This effect re-runs whenever `range` changes (it's in the dependency array),
+  // so switching between 7/30 days re-fetches just the summary.
   useEffect(() => {
     api.get(`/analytics/summary?range=${range}`).then((r) => setSummary(r.data));
   }, [range]);
 
+  // The rest of the data only needs to load once (empty dependency array).
   useEffect(() => {
     api.get('/analytics/study-hours?weeks=10').then((r) => setStudyHours(r.data));
     api.get('/analytics/tasks-breakdown').then((r) => setBreakdown(r.data));
@@ -32,6 +45,11 @@ export default function Analytics() {
   }, []);
 
   // Merge every skill's history snapshots onto a shared date axis.
+  // Each skill has its own list of {date, progress} checkpoints on different dates.
+  // A multi-line chart needs rows like { date, SkillA: 40, SkillB: 65 }. So we:
+  //   1. collect ALL dates any skill has a checkpoint on, sorted,
+  //   2. for each date, look up each skill's MOST RECENT progress up to that date
+  //      (carry the last known value forward so lines don't have gaps).
   const skillSeries = useMemo(() => {
     const dates = new Set();
     skillProgress.forEach((s) => s.history.forEach((h) => dates.add(h.date.slice(0, 10))));
@@ -40,12 +58,13 @@ export default function Analytics() {
       const row = { date: d };
       skillProgress.forEach((s) => {
         const pts = s.history.filter((h) => h.date.slice(0, 10) <= d);
-        if (pts.length) row[s.name] = pts[pts.length - 1].progress;
+        if (pts.length) row[s.name] = pts[pts.length - 1].progress; // last value on/before this date
       });
       return row;
     });
   }, [skillProgress]);
 
+  // Shape the task-status counts into the 3 rows the "Tasks by status" chart wants.
   const taskData = breakdown
     ? [
         { name: 'Pending', count: breakdown.byStatus['pending'] || 0 },
@@ -107,6 +126,8 @@ export default function Analytics() {
         </div>
       </div>
 
+      {/* Multi-line skill chart. We render one <Line> per skill, cycling through the
+          SERIES palette with `i % SERIES.length` so colors repeat if there are many. */}
       <div className="card">
         <h3>Skill progress over time</h3>
         {skillSeries.length === 0 ? (
@@ -122,12 +143,12 @@ export default function Analytics() {
               {skillProgress.map((s, i) => (
                 <Line
                   key={s.id}
-                  type="monotone"
-                  dataKey={s.name}
+                  type="monotone"                       // smooth curved line
+                  dataKey={s.name}                      // which column of skillSeries this line plots
                   stroke={SERIES[i % SERIES.length]}
                   strokeWidth={2}
                   dot={{ r: 3, fill: SERIES[i % SERIES.length] }}
-                  connectNulls
+                  connectNulls                          // bridge gaps where a skill has no value yet
                 />
               ))}
             </LineChart>

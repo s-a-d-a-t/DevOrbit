@@ -1,13 +1,42 @@
+// ============================================================================
+// Grainient.jsx  —  AN ANIMATED, GRAINY GRADIENT BACKGROUND (drawn with WebGL)
+// ----------------------------------------------------------------------------
+// This is the flowing, colorful backdrop on the landing page. It's an ADVANCED
+// component — don't feel you need to understand every line to use the app. Here's
+// the mental model so it isn't a black box:
+//
+//   - Instead of CSS, it paints pixels using WebGL (the browser's GPU drawing API)
+//     via a tiny library called `ogl`. GPUs can animate a full-screen gradient
+//     far more smoothly than CSS could.
+//   - The actual "how each pixel is colored" logic is the `fragment` shader below:
+//     a program written in GLSL that runs once per pixel, every frame, on the GPU.
+//     The math warps and blends three colors and adds film-grain noise.
+//   - All the tweakable numbers (colors, speed, warp, grain...) are passed in as
+//     React props and forwarded to the shader as "uniforms" (shader variables).
+//
+// The React part below is mostly plumbing: create the GPU context once, run an
+// animation loop, and keep the shader's uniforms in sync with the props.
+// ============================================================================
+
 import { useEffect, useRef } from 'react';
+// `ogl` is a minimal WebGL library. These are its core building blocks:
+//   Renderer (owns the canvas + GPU), Program (a shader pair), Mesh (geometry +
+//   program to draw), Triangle (one big triangle covering the screen to draw on).
 import { Renderer, Program, Mesh, Triangle } from 'ogl';
 import './Grainient.css';
 
+// Convert a hex color like "#5227FF" into [r, g, b] where each channel is 0..1,
+// which is the format shaders expect (not 0..255). Falls back to white on bad input.
 const hexToRgb = hex => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return [1, 1, 1];
   return [parseInt(result[1], 16) / 255, parseInt(result[2], 16) / 255, parseInt(result[3], 16) / 255];
 };
 
+// --- The VERTEX shader -------------------------------------------------------
+// Runs once per corner of the geometry. Its only job here is to place the big
+// triangle so it covers the whole screen. The interesting work is in the fragment
+// shader. (This string is GLSL source code compiled and run on the GPU.)
 const vertex = `#version 300 es
 in vec2 position;
 void main() {
@@ -15,6 +44,13 @@ void main() {
 }
 `;
 
+// --- The FRAGMENT shader -----------------------------------------------------
+// This is the heart of the effect. It runs once for EVERY pixel, EVERY frame, on
+// the GPU, and outputs that pixel's final color. The `uniform` lines at the top
+// are the inputs we feed from React (time, colors, warp/grain settings...).
+// The math: warp the coordinates with noise, blend three colors across the
+// screen, add film grain, then apply contrast/gamma/saturation. You do NOT need
+// to follow the math to work on the rest of the app — treat it as a color recipe.
 const fragment = `#version 300 es
 precision highp float;
 uniform vec2 iResolution;
@@ -102,8 +138,13 @@ void main(){
 
 // Keep renderer/program alive across re-renders so Effect 2 can update
 // uniforms without ever rebuilding the WebGL context.
+// (A WeakMap keyed by the container DOM node lets us stash the GPU objects
+//  outside React state so they survive re-renders but get garbage-collected
+//  automatically when the element goes away.)
 const ctxMap = new WeakMap();
 
+// The component. Every prop here is a knob controlling the look, each with a
+// sensible default. They flow into the shader as uniforms (see Effect 2).
 const Grainient = ({
   timeSpeed = 0.25,
   colorBalance = 0.0,
@@ -129,9 +170,16 @@ const Grainient = ({
   color3 = '#B497CF',
   className = ''
 }) => {
+  // A ref to the <div> we'll attach the WebGL <canvas> into. `useRef` gives us a
+  // stable handle to a DOM node that doesn't trigger re-renders when it changes.
   const containerRef = useRef(null);
 
   // Effect 1: build WebGL context once, pause when offscreen / tab hidden
+  // The empty dependency array [] means this runs a single time (on mount) and its
+  // cleanup runs on unmount. Inside: create the renderer, the shader program with
+  // all uniforms, size it to the container, and start a requestAnimationFrame loop.
+  // Two Observers pause the loop when the canvas is scrolled offscreen or the tab
+  // is hidden — a performance win so we don't burn the GPU when nobody can see it.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -204,6 +252,9 @@ const Grainient = ({
     let isPageVisible = !document.hidden;
     const t0 = performance.now();
 
+    // The animation loop. requestAnimationFrame calls this ~60×/second. Each call
+    // advances the shader's clock (iTime, in seconds) and redraws the frame, then
+    // schedules the next one. This is what makes the gradient move.
     const loop = t => {
       program.uniforms.iTime.value = (t - t0) * 0.001;
       renderer.render({ scene: mesh });
@@ -231,6 +282,9 @@ const Grainient = ({
 
     tryStart();
 
+    // Cleanup (runs on unmount): stop the loop, disconnect observers, remove the
+    // listener, forget the GPU context, and detach the canvas. Always tear down
+    // what an effect set up to avoid memory leaks.
     return () => {
       tryStop();
       ro.disconnect();
@@ -242,6 +296,9 @@ const Grainient = ({
   }, []); // renderer created once
 
   // Effect 2: sync props to uniforms — zero GPU cost, no teardown
+  // Whenever any prop changes, copy the new values into the shader's uniforms.
+  // This is cheap (just assigning numbers) and needs no rebuild — the running
+  // loop from Effect 1 picks up the new values on its very next frame.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -279,6 +336,8 @@ const Grainient = ({
   ]);
 
 
+  // The only thing React actually renders is this empty div. Effect 1 injects the
+  // WebGL <canvas> into it. Everything visible is drawn by the GPU inside that canvas.
   return <div ref={containerRef} className={`grainient-container ${className}`.trim()} />;
 };
 

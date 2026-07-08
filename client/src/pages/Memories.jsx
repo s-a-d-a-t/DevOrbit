@@ -1,8 +1,17 @@
+// ============================================================================
+// Memories.jsx  —  A PHOTO "MEMORIES" WALL RENDERED AS THE 3D DOME
+// ----------------------------------------------------------------------------
+// Standard CRUD for memory records (title, image URL, date, description), but the
+// fun part is the presentation: it feeds the images into the DomeGallery component
+// to show them on a spinnable 3D dome. Good example of composing a complex child
+// component (DomeGallery) with data you own here.
+// ============================================================================
+
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import DomeGallery from '../components/DomeGallery';
 import Modal from '../components/Modal';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext'; // to tint the dome per theme
 import { IconImage, IconPlus, IconEdit } from '../components/icons';
 
 const todayISO = () => new Date().toLocaleDateString('en-CA');
@@ -45,6 +54,8 @@ export default function Memories() {
   };
 
   // Tiles for the dome — only memories that carry an image.
+  // Reshape our memory objects into the { src, alt, title, description } format the
+  // DomeGallery expects.
   const images = useMemo(
     () =>
       memories
@@ -53,6 +64,8 @@ export default function Memories() {
     [memories]
   );
 
+  // The "since" stat: find the oldest dated memory and format it as "Mon YYYY".
+  // Math.min(...dates) finds the earliest timestamp.
   const span = useMemo(() => {
     const dated = memories.filter((m) => m.date).map((m) => new Date(m.date));
     if (dated.length < 1) return '–';
@@ -84,6 +97,8 @@ export default function Memories() {
             <div className="stat-mini"><span className="v">{span}</span><span className="l">since</span></div>
           </div>
 
+          {/* Hand our images to the DomeGallery and tune its look via props. The
+              overlay tint switches with the theme. */}
           <div className="dome-wrap">
             <DomeGallery
               images={images}
@@ -146,6 +161,8 @@ export default function Memories() {
           <div style={{ marginBottom: 12 }}>
             <label>Image URL</label>
             <input placeholder="https://… (paste a link to a photo)" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} />
+            {/* Live image preview. onError hides the <img> if the URL is broken;
+                onLoad shows it again once a valid image loads. */}
             {form.imageUrl.trim() && (
               <img
                 src={form.imageUrl}

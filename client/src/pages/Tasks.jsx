@@ -1,20 +1,36 @@
+// ============================================================================
+// Tasks.jsx  —  A KANBAN-STYLE TASK BOARD (Backlog / In progress / Done)
+// ----------------------------------------------------------------------------
+// A full CRUD page (Create, Read, Update, Delete) with three columns, search,
+// priority filtering, and due-date urgency. It reuses the same building blocks
+// you've already seen: StatTile for the top cards, Modal for the add/edit form,
+// useMemo for derived lists. Once you understand this file, most app pages will
+// feel familiar — they all follow this shape.
+// ============================================================================
+
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import StatTile from '../components/StatTile';
 import Modal from '../components/Modal';
 import { IconCheck, IconClock, IconTarget, IconPlus, IconEdit, IconFlame, IconChart } from '../components/icons';
 
+// The three board columns: [status value stored in the DB, human label].
 const COLUMNS = [
   ['pending', 'Backlog'],
   ['in-progress', 'In progress'],
   ['done', 'Done'],
 ];
+// Numeric ranks so we can sort high→medium→low easily.
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
+// A blank form, reused whenever we open the "new task" modal.
 const BLANK = { title: '', description: '', priority: 'medium', tags: '', dueDate: '' };
 
+// Given a task, work out its due-date urgency. Returns null if there's no due date
+// or it's already done, otherwise a { cls, label } used to color + label the chip.
+// 86400000 is the number of milliseconds in a day, so (due - today)/that = whole days.
 const dueInfo = (t) => {
   if (!t.dueDate || t.status === 'done') return null;
-  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0); // zero the time so we compare whole days
   const due = new Date(t.dueDate); due.setHours(0, 0, 0, 0);
   const days = Math.round((due - today) / 86400000);
   if (days < 0) return { cls: 'overdue', label: `${-days}d overdue` };
@@ -24,16 +40,20 @@ const dueInfo = (t) => {
 };
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState([]);
-  const [query, setQuery] = useState('');
-  const [prio, setPrio] = useState('all');
+  const [tasks, setTasks] = useState([]);            // all tasks from the server
+  const [query, setQuery] = useState('');            // search box text
+  const [prio, setPrio] = useState('all');           // active priority filter chip
   const [editing, setEditing] = useState(null); // null = closed, 'new' = create, else task
-  const [form, setForm] = useState(BLANK);
+  const [form, setForm] = useState(BLANK);           // the modal's form fields
 
+  // Fetch all tasks into state. Re-called after every create/update/delete.
   const load = () => api.get('/tasks').then((r) => setTasks(r.data));
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, []); // load once on mount
 
+  // Open the modal blank (create) ...
   const openCreate = () => { setForm(BLANK); setEditing('new'); };
+  // ... or pre-filled from an existing task (edit). Note tags is an array in the DB
+  // but a comma string in the form, and the date is trimmed to YYYY-MM-DD for the input.
   const openEdit = (t) => {
     setForm({
       title: t.title,
@@ -46,13 +66,15 @@ export default function Tasks() {
   };
   const close = () => setEditing(null);
 
+  // Save handler — same function for create and edit (POST vs PUT decided by `editing`).
   const save = async (e) => {
     e.preventDefault();
-    if (!form.title.trim()) return;
+    if (!form.title.trim()) return; // title is required
     const payload = {
       title: form.title.trim(),
       description: form.description.trim(),
       priority: form.priority,
+      // Convert the comma-separated tags string back into a clean array.
       tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
       dueDate: form.dueDate || null,
     };
@@ -62,9 +84,13 @@ export default function Tasks() {
     load();
   };
 
+  // Move a task between columns (change its status), then refresh.
   const setStatus = async (task, status) => { await api.put(`/tasks/${task.id}`, { status }); load(); };
+  // Delete a task, then refresh.
   const remove = async (task) => { await api.delete(`/tasks/${task.id}`); load(); };
 
+  // Derived: the numbers shown in the top StatTiles. useMemo recomputes only when
+  // `tasks` changes, not on every keystroke in the search box.
   const stats = useMemo(() => {
     const open = tasks.filter((t) => t.status !== 'done').length;
     const doing = tasks.filter((t) => t.status === 'in-progress').length;
@@ -74,6 +100,10 @@ export default function Tasks() {
     return { open, doing, done, overdue, rate };
   }, [tasks]);
 
+  // Derived: the filtered + sorted list actually shown. Three steps, chained:
+  //   1. filter by the active priority chip,
+  //   2. filter by the search query (matches title OR any tag),
+  //   3. sort overdue tasks first, then by priority.
   const visible = useMemo(() => {
     const q = query.toLowerCase();
     return tasks
@@ -82,6 +112,7 @@ export default function Tasks() {
       .sort((a, b) => {
         const da = dueInfo(a)?.cls === 'overdue' ? -1 : 0;
         const db = dueInfo(b)?.cls === 'overdue' ? -1 : 0;
+        // `da - db` sorts overdue first; if tied, fall back to priority rank.
         return da - db || PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
       });
   }, [tasks, query, prio]);
@@ -113,6 +144,8 @@ export default function Tasks() {
           </div>
         </div>
 
+        {/* Render the three columns. For each, pick the visible tasks whose status
+            matches, then render a card per task. This is the kanban board itself. */}
         {COLUMNS.map(([status, label]) => {
           const col = visible.filter((t) => t.status === status);
           return (
@@ -149,6 +182,8 @@ export default function Tasks() {
                       {due && <span className={`due-chip ${due.cls}`}>{due.label}</span>}
                       {t.tags?.map((tag) => <span key={tag} className="badge tag">{tag}</span>)}
                     </div>
+                    {/* Quick "move between columns" buttons, shown only if not done.
+                        These give a click-to-advance alternative to drag-and-drop. */}
                     {t.status !== 'done' && (
                       <div className="task-actions">
                         {t.status === 'pending' && <button type="button" className="ghost small" onClick={() => setStatus(t, 'in-progress')}>Start →</button>}

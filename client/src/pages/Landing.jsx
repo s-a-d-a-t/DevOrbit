@@ -1,28 +1,45 @@
+// ============================================================================
+// Landing.jsx  —  THE PUBLIC MARKETING / HOME PAGE (shown to logged-out visitors)
+// ----------------------------------------------------------------------------
+// Unlike the app pages, this one has almost no data logic — it's a long, styled
+// sales page: hero, feature rows, a timeline, and a footer. The only "logic" bits
+// are a scroll-reveal animation hook and a couple of fake/mock visuals used for show.
+// A good file to skim for how JSX + CSS compose a page.
+// ============================================================================
+
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { HEAT } from '../chartTheme';
+import { HEAT } from '../chartTheme';           // reuse the heatmap color ramp for the mock calendar
 import { useTheme } from '../context/ThemeContext';
 import { IconLogo, IconGitHub, IconMail, IconSun, IconMoon } from '../components/icons';
-import Grainient from '../components/Grainient';
+import Grainient from '../components/Grainient'; // the animated background (commented in its own file)
 
 /* reveal-on-scroll */
+// Custom hook: fade/slide elements in as they scroll into view. Any element with
+// the class "reveal" gets the class "in" added once it enters the viewport (CSS
+// then animates it). IntersectionObserver efficiently watches visibility for us.
 function useReveal() {
   useEffect(() => {
     const els = document.querySelectorAll('.reveal');
     const io = new IntersectionObserver(
       (entries) => entries.forEach((e) => e.isIntersecting && e.target.classList.add('in')),
-      { threshold: 0.12 }
+      { threshold: 0.12 } // trigger when ~12% of the element is visible
     );
     els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    return () => io.disconnect(); // stop observing on unmount
   }, []);
 }
 
+// A purely decorative fake contribution calendar for the hero/feature visuals.
+// It generates deterministic pseudo-random "activity levels" (0..4) from a sine
+// hash so it looks organic but renders the same every time (no real data involved).
 function MockHeatmap({ cols = 22, size = 9 }) {
   const cells = [];
   for (let i = 0; i < 7 * cols; i++) {
+    // Classic GLSL-style hash: sin(x)*bignum, take the fractional part -> 0..1.
     const r = Math.sin(i * 12.9898) * 43758.5453;
     const t = r - Math.floor(r);
+    // Bucket that 0..1 value into one of 5 intensity levels.
     cells.push(t < 0.28 ? 0 : t < 0.52 ? 1 : t < 0.74 ? 2 : t < 0.9 ? 3 : 4);
   }
   return (
@@ -34,6 +51,8 @@ function MockHeatmap({ cols = 22, size = 9 }) {
   );
 }
 
+// Content for the "a day with the app" timeline section, as [time, title, text]
+// rows. Storing copy as data keeps the JSX below a simple .map() loop.
 const TIMELINE = [
   ['08:40', 'Plan', 'Open the dashboard. Today\'s plan is already assembled from overdue work, priorities and habits.'],
   ['09:00', 'Deep work', 'Start a 90-minute focus session. It logs itself when the timer ends.'],
@@ -42,15 +61,18 @@ const TIMELINE = [
 ];
 
 export default function Landing() {
-  useReveal();
-  const { theme, toggleTheme } = useTheme();
+  useReveal();                               // activate the scroll-in animations
+  const { theme, toggleTheme } = useTheme(); // theme toggle for the top-right button
   // brand-matched gradient (design system tricolor: gold → ember → sage),
-  // tuned per theme so the backdrop stays warm in light and deep in dark
+  // tuned per theme so the backdrop stays warm in light and deep in dark.
+  // We pick a different trio of colors for the Grainient background per theme.
   const grain = theme === 'dark'
     ? { color1: '#D77B50', color2: '#C9922E', color3: '#3A4A34' }
     : { color1: '#CE6C47', color2: '#B4792B', color3: '#5F7D57' };
   return (
     <div className="landing">
+      {/* Full-bleed animated background sitting behind everything (aria-hidden =
+          decorative, invisible to screen readers). */}
       <div className="landing-bg" aria-hidden>
         <Grainient
           color1={grain.color1}
@@ -164,6 +186,7 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* Timeline section — rendered by looping over the TIMELINE data array. */}
         <section className="timeline-sec reveal">
           <span className="eyebrow">A day with DevPulse</span>
           <h2>The productive day, end to end.</h2>

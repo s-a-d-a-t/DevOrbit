@@ -1,3 +1,12 @@
+// ============================================================================
+// Learning.jsx  —  STUDY-SESSION LOG + WEEKLY CHART + RESOURCE LIBRARY
+// ----------------------------------------------------------------------------
+// Log what you studied (topic, hours, difficulty, notes, links). The page shows
+// summary stats, an "hours per week" bar chart, a "where your hours go" breakdown,
+// a journal of sessions, and embeds the ResourceLibrary component you saw earlier.
+// Structurally it's the same CRUD pattern as Tasks/Skills.
+// ============================================================================
+
 import { useEffect, useMemo, useState } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import api from '../api';
@@ -7,9 +16,10 @@ import Modal from '../components/Modal';
 import { IconBook, IconChart, IconSpark, IconPlus, IconEdit, IconClock, IconTarget } from '../components/icons';
 import { SERIES, INK, GRID, AXIS, CURSOR, tooltipStyle } from '../chartTheme';
 
-const todayISO = () => new Date().toLocaleDateString('en-CA');
-const round1 = (n) => Math.round(n * 10) / 10;
-const hostOf = (url) => {
+// Small utilities:
+const todayISO = () => new Date().toLocaleDateString('en-CA'); // today as "YYYY-MM-DD"
+const round1 = (n) => Math.round(n * 10) / 10;                 // round to 1 decimal place
+const hostOf = (url) => {                                       // URL -> clean hostname (fallback label)
   try {
     return new URL(url).hostname.replace(/^www\./, '');
   } catch {
@@ -19,17 +29,19 @@ const hostOf = (url) => {
 const BLANK = { topic: '', hours: 1, difficulty: 3, notes: '', tags: '', date: todayISO() };
 
 export default function Learning() {
-  const [logs, setLogs] = useState([]);
-  const [resources, setResources] = useState([]);
-  const [weekly, setWeekly] = useState([]);
+  const [logs, setLogs] = useState([]);          // all study sessions
+  const [resources, setResources] = useState([]);// data for the embedded ResourceLibrary
+  const [weekly, setWeekly] = useState([]);       // pre-aggregated hours-per-week from the server
   const [editing, setEditing] = useState(null); // null | 'new' | log
   const [form, setForm] = useState(BLANK);
-  const [linkRows, setLinkRows] = useState([{ url: '', label: '' }]);
+  const [linkRows, setLinkRows] = useState([{ url: '', label: '' }]); // dynamic "resources used" inputs
 
+  // Same dynamic-rows helpers as ResourceLibrary (patch/add/remove a link row).
   const setLink = (i, patch) => setLinkRows((rows) => rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   const addLinkRow = () => setLinkRows((rows) => [...rows, { url: '', label: '' }]);
   const removeLinkRow = (i) => setLinkRows((rows) => (rows.length > 1 ? rows.filter((_, idx) => idx !== i) : rows));
 
+  // Load sessions, resources, and the weekly-hours aggregation together.
   const load = () => {
     api.get('/learning').then((r) => setLogs(r.data));
     api.get('/resources').then((r) => setResources(r.data));
@@ -65,9 +77,9 @@ export default function Learning() {
       difficulty: form.difficulty,
       notes: form.notes,
       date: form.date,
-      tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
+      tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean), // CSV -> clean array
       links: linkRows
-        .filter((l) => l.url.trim())
+        .filter((l) => l.url.trim())                                    // drop empty rows
         .map((l) => ({ label: l.label.trim() || hostOf(l.url), url: l.url.trim() })),
     };
     if (editing === 'new') await api.post('/learning', payload);
@@ -77,6 +89,8 @@ export default function Learning() {
   };
 
   /* ---- derived stats ---- */
+  // Totals for the StatTiles. `reduce` sums hours; a Set of date strings counts
+  // distinct study days (a Set automatically de-duplicates).
   const stats = useMemo(() => {
     const total = logs.reduce((a, l) => a + l.hours, 0);
     const weekAgo = new Date();
@@ -87,12 +101,14 @@ export default function Learning() {
     return { total: round1(total), thisWeek: round1(thisWeek), sessions: logs.length, avgDiff: round1(avgDiff), days };
   }, [logs]);
 
+  // Sum hours per topic, then take the top 6 for the "where your hours go" bars.
+  // A Map accumulates {topic -> hours}; we sort by hours descending.
   const topTopics = useMemo(() => {
     const map = new Map();
     for (const l of logs) map.set(l.topic, (map.get(l.topic) || 0) + l.hours);
     return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
   }, [logs]);
-  const maxTopic = topTopics[0]?.[1] || 1;
+  const maxTopic = topTopics[0]?.[1] || 1; // the biggest topic's hours, used to scale the bars
 
   return (
     <>
@@ -112,6 +128,8 @@ export default function Learning() {
           <StatTile icon={<IconTarget size={17} />} label="Avg difficulty" value={<>{stats.avgDiff}<em>/5</em></>} delta={stats.avgDiff >= 3.5 ? 'pushing hard' : 'comfortable zone'} />
         </div>
 
+        {/* Weekly hours bar chart. Falls back to an empty-state message with no data.
+            tickFormatter shortens the week label to just the week number. */}
         <div className="widget w-7">
           <h3><IconChart size={15} /> Hours per week</h3>
           {weekly.length === 0 ? (
@@ -143,6 +161,8 @@ export default function Learning() {
           ))}
         </div>
 
+        {/* Session journal: the 20 most recent sessions. Difficulty renders as filled
+            vs empty stars ('★'.repeat(n) then '★'.repeat(5-n) dimmed). */}
         <div className="widget w-12">
           <h3><IconBook size={15} /> Session journal</h3>
           {logs.length === 0 && <div className="empty">No sessions yet — log your first one.</div>}
@@ -177,6 +197,8 @@ export default function Learning() {
           ))}
         </div>
 
+        {/* The reusable resource library component. We hand it the data and give it
+            `load` as onChange so any edit inside it refreshes this whole page. */}
         <div className="w-12">
           <ResourceLibrary resources={resources} onChange={load} />
         </div>

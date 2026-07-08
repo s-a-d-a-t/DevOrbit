@@ -1,31 +1,54 @@
+// ============================================================================
+// Notes.jsx  —  A MARKDOWN NOTE EDITOR WITH AUTOSAVE, PREVIEW & VERSION HISTORY
+// ----------------------------------------------------------------------------
+// The most involved "editor" page. Key ideas to learn here:
+//   - DEBOUNCED AUTOSAVE with retry: typing schedules a save 800ms later; failures
+//     retry. This avoids saving on every keystroke while never losing work.
+//   - A `draft` useRef holding the LATEST text OUTSIDE React state, so the save
+//     function can read current values without being re-created on every render.
+//   - Markdown -> HTML rendering with the `marked` library and dangerouslySetInnerHTML.
+//   - View modes (edit / split / read) and a distraction-free focus mode.
+// ============================================================================
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { marked } from 'marked';
+import { marked } from 'marked'; // converts markdown text into HTML
 import api from '../api';
 import {
   IconNote, IconEdit, IconColumns, IconEye, IconExpand, IconHistory, IconPin, IconPlus,
 } from '../components/icons';
 
+// Configure the markdown parser: gfm = GitHub-flavored markdown, breaks = treat
+// single newlines as line breaks. Set once at module load.
 marked.setOptions({ gfm: true, breaks: true });
 
+// Format a timestamp compactly, e.g. "Jul 8, 02:30 PM".
 const fmtTime = (d) =>
   new Date(d).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 export default function Notes() {
-  const [notes, setNotes] = useState(null);
-  const [activeId, setActiveId] = useState(null);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const [notes, setNotes] = useState(null);      // all notes (null = still loading)
+  const [activeId, setActiveId] = useState(null);// which note is open
+  const [title, setTitle] = useState('');        // the open note's title (editable)
+  const [content, setContent] = useState('');    // the open note's body (editable)
   const [mode, setMode] = useState('split'); // edit | split | read
-  const [focusMode, setFocusMode] = useState(false);
-  const [saveState, setSaveState] = useState('');
+  const [focusMode, setFocusMode] = useState(false); // hide everything but the editor
+  const [saveState, setSaveState] = useState('');    // status text: 'typing…' / 'saving…' / 'saved'
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  const saveTimer = useRef(null);
+  const saveTimer = useRef(null); // holds the debounce/retry timeout id
   // Latest editor state, readable outside React's render cycle.
+  // WHY a ref and not state: the async `persist` needs the newest title/content at
+  // the moment it runs. State would be stale inside a debounced callback; a ref is
+  // always current. `dirty` tracks whether there are unsaved changes.
   const draft = useRef({ id: null, title: '', content: '', dirty: false });
 
+  // The currently open note object (found from the list by id).
   const active = notes?.find((n) => n.id === activeId);
 
+  // Actually save the current draft to the server. Guards: skip if nothing is open
+  // or nothing changed. On success it also updates the in-memory list so the sidebar
+  // timestamp refreshes; on failure it marks dirty again and retries in 3s.
+  // useCallback with [] means this function keeps a stable identity across renders.
   const persist = useCallback(async () => {
     const d = draft.current;
     if (!d.id || !d.dirty) return;
@@ -39,18 +62,22 @@ export default function Notes() {
         ns?.map((n) => (n.id === d.id ? { ...n, title: d.title || 'Untitled', content: d.content, updatedAt: new Date().toISOString() } : n))
       );
     } catch {
-      d.dirty = true;
+      d.dirty = true;                         // keep the change pending
       setSaveState('offline — retrying');
-      saveTimer.current = setTimeout(persist, 3000);
+      saveTimer.current = setTimeout(persist, 3000); // retry later
     }
   }, []);
 
+  // Debounce: called on every keystroke. It resets the timer so the actual save
+  // (persist) only fires 800ms after you STOP typing.
   const queueSave = useCallback(() => {
     setSaveState('typing…');
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(persist, 800);
   }, [persist]);
 
+  // Load a note into the editor: sync both the React state (for rendering) and the
+  // draft ref (for saving).
   const openNote = useCallback((note) => {
     setActiveId(note.id);
     setTitle(note.title);
@@ -60,6 +87,8 @@ export default function Notes() {
     draft.current = { id: note.id, title: note.title, content: note.content, dirty: false };
   }, []);
 
+  // Fetch all notes. Optionally select a specific one (e.g. a just-created note),
+  // otherwise open the first. If there are none, clear the editor.
   const load = useCallback(async (selectId) => {
     const { data } = await api.get('/notes');
     setNotes(data);
@@ -72,9 +101,11 @@ export default function Notes() {
     }
   }, [openNote]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load]); // initial fetch
 
   // Flush pending edits on unmount / tab close.
+  // 'beforeunload' fires when the tab is closing; the cleanup's persist() covers
+  // navigating away within the app. Together they prevent losing an in-flight edit.
   useEffect(() => {
     const flush = () => persist();
     window.addEventListener('beforeunload', flush);
@@ -84,12 +115,15 @@ export default function Notes() {
     };
   }, [persist]);
 
+  // Let the Escape key exit focus mode.
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && setFocusMode(false);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // Title change handler: update state + draft, mirror the rename in the sidebar
+  // instantly, and queue a debounced save.
   const onTitle = (v) => {
     setTitle(v);
     draft.current.title = v;
@@ -99,6 +133,7 @@ export default function Notes() {
     queueSave();
   };
 
+  // Body change handler: same idea, without the sidebar update.
   const onContent = (v) => {
     setContent(v);
     draft.current.content = v;
@@ -106,6 +141,7 @@ export default function Notes() {
     queueSave();
   };
 
+  // Switch to another note — but save the current one first so no edits are lost.
   const select = async (n) => {
     if (n.id === activeId) return;
     await persist(); // never lose edits when switching
@@ -113,12 +149,15 @@ export default function Notes() {
     openNote(fresh);
   };
 
+  // Create a new blank note and open it.
   const create = async () => {
     await persist();
     const { data } = await api.post('/notes', { title: 'Untitled', content: '' });
     await load(data.id);
   };
 
+  // Delete the open note. We clear the dirty flag + timer first so no stray save
+  // fires for the now-deleted note.
   const remove = async () => {
     if (!active) return;
     draft.current.dirty = false;
@@ -127,6 +166,7 @@ export default function Notes() {
     await load();
   };
 
+  // Toggle the "pinned" flag on the open note.
   const togglePin = async () => {
     if (!active) return;
     await persist();
@@ -134,13 +174,18 @@ export default function Notes() {
     await load(active.id);
   };
 
+  // Restore an older version's content back into the editor.
   const restore = (v) => {
     onContent(v.content);
     setHistoryOpen(false);
   };
 
+  // Render the markdown to HTML for the preview pane. Memoized so we only re-parse
+  // when the content changes. The `{ __html }` shape is what dangerouslySetInnerHTML
+  // expects (see the preview div below).
   const html = useMemo(() => ({ __html: marked.parse(content || '*Nothing here yet — start writing.*') }), [content]);
 
+  // Loading state: notes hasn't arrived yet -> show skeleton placeholders.
   if (notes === null) {
     return (
       <>
@@ -223,6 +268,9 @@ export default function Notes() {
                   spellCheck={false}
                 />
               )}
+              {/* The rendered markdown preview. dangerouslySetInnerHTML injects raw
+                  HTML — named "dangerous" because unsanitized HTML can be an XSS risk.
+                  It's acceptable here since the content is the user's own notes. */}
               {(mode === 'split' && !focusMode) || mode === 'read' ? (
                 <div className="md-preview" dangerouslySetInnerHTML={html} />
               ) : null}

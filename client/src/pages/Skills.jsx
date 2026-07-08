@@ -1,18 +1,32 @@
+// ============================================================================
+// Skills.jsx  —  SKILL TRACKER WITH MASTERY %, LEVELS, AND TREND CHARTS
+// ----------------------------------------------------------------------------
+// Same CRUD + StatTile + Modal skeleton as Tasks, but a great place to learn some
+// hand-drawn SVG dataviz. Three small presentational components are defined first:
+//   - Ring:       a circular progress dial (the "how do you draw a % ring?" trick)
+//   - LevelLadder: beginner→expert rungs that light up
+//   - Sparkline:  a tiny inline trend line of past progress checkpoints
+// Then SkillCard combines them per skill, and the Skills page ties it together.
+// ============================================================================
+
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import StatTile from '../components/StatTile';
 import Modal from '../components/Modal';
 import { IconSpark, IconPlus, IconEdit, IconFolder, IconChart, IconFlame } from '../components/icons';
 
-const LEVELS = ['beginner', 'intermediate', 'advanced', 'expert'];
+const LEVELS = ['beginner', 'intermediate', 'advanced', 'expert']; // the ordered skill ladder
 const BLANK = { name: '', level: 'beginner', progress: 10, category: '' };
 
 /* circular progress ring */
+// Draws a donut where a colored arc represents `value`% of a full circle. The trick:
+// a circle's stroke can be dashed; we set the dash length to the full circumference,
+// then offset it by the "unfilled" fraction so only the filled part shows.
 function Ring({ value, size = 72, stroke = 7 }) {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const off = c * (1 - Math.min(100, Math.max(0, value)) / 100);
-  const id = `ring-${size}`;
+  const r = (size - stroke) / 2;      // radius (leave room so the thick stroke isn't clipped)
+  const c = 2 * Math.PI * r;          // circumference = total dash length
+  const off = c * (1 - Math.min(100, Math.max(0, value)) / 100); // how much to "hide" (clamped 0..100)
+  const id = `ring-${size}`;          // unique id for the gradient definition
   return (
     <svg width={size} height={size} className="ring" aria-hidden>
       <defs>
@@ -21,7 +35,10 @@ function Ring({ value, size = 72, stroke = 7 }) {
           <stop offset="1" stopColor="var(--gold)" />
         </linearGradient>
       </defs>
+      {/* Track circle: the full faint background ring. */}
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth={stroke} />
+      {/* Progress arc: same circle, but dashed + offset so only `value`% shows. The
+          rotate(-90) starts the arc at 12 o'clock; the transition animates changes. */}
       <circle
         cx={size / 2} cy={size / 2} r={r} fill="none"
         stroke={`url(#${id})`} strokeWidth={stroke} strokeLinecap="round"
@@ -29,14 +46,16 @@ function Ring({ value, size = 72, stroke = 7 }) {
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
         style={{ transition: 'stroke-dashoffset 0.6s var(--ease)' }}
       />
+      {/* The number in the middle. dy nudges it to vertical center. */}
       <text x="50%" y="50%" dy="0.34em" textAnchor="middle" className="ring-text">{value}</text>
     </svg>
   );
 }
 
 /* beginner → expert ladder */
+// Four rungs; every rung up to and including the current level gets the "on" class.
 function LevelLadder({ level }) {
-  const idx = LEVELS.indexOf(level);
+  const idx = LEVELS.indexOf(level); // position of the current level in the ladder
   return (
     <div className="ladder" title={level}>
       {LEVELS.map((l, i) => (
@@ -47,16 +66,20 @@ function LevelLadder({ level }) {
 }
 
 /* history trend sparkline */
+// A miniature line chart of past progress values, drawn by hand as an SVG polyline.
+// Needs at least 2 points to draw a line. The `xy` helper maps a data point to
+// pixel coordinates: index -> x across the width, value -> y (inverted, since SVG
+// y grows downward). `line` is the stroke; `area` closes it to the bottom for a fill.
 function Sparkline({ history }) {
   if (!history || history.length < 2) return null;
-  const w = 116, h = 34, pad = 3;
+  const w = 116, h = 34, pad = 3;                       // canvas size + padding
   const vals = history.map((p) => p.progress);
   const min = Math.min(...vals), max = Math.max(...vals);
-  const span = max - min || 1;
+  const span = max - min || 1;                          // avoid divide-by-zero if flat
   const xy = (v, i) => [pad + (i / (vals.length - 1)) * (w - pad * 2), h - pad - ((v - min) / span) * (h - pad * 2)];
-  const line = vals.map((v, i) => xy(v, i).join(',')).join(' ');
-  const [lx, ly] = xy(vals[vals.length - 1], vals.length - 1);
-  const area = `${pad},${h} ${line} ${w - pad},${h}`;
+  const line = vals.map((v, i) => xy(v, i).join(',')).join(' '); // "x1,y1 x2,y2 ..."
+  const [lx, ly] = xy(vals[vals.length - 1], vals.length - 1);   // last point (for the dot)
+  const area = `${pad},${h} ${line} ${w - pad},${h}`;  // polygon: line + down to baseline
   return (
     <svg width={w} height={h} className="spark" aria-hidden>
       <defs>
@@ -72,16 +95,21 @@ function Sparkline({ history }) {
   );
 }
 
+// One card per skill. Combines the Ring, LevelLadder, Sparkline and an inline
+// "update mastery" slider. `draft` holds the slider value locally until you save,
+// so dragging feels instant without hitting the server on every pixel.
 function SkillCard({ s, projects, projectName, update, onEdit, onDelete }) {
-  const [draft, setDraft] = useState(s.progress);
-  const [tuning, setTuning] = useState(false);
-  const dirty = draft !== s.progress;
+  const [draft, setDraft] = useState(s.progress); // local, unsaved mastery value
+  const [tuning, setTuning] = useState(false);    // is the slider panel open?
+  const dirty = draft !== s.progress;             // has the draft diverged from saved?
+  // Overall trend since the first recorded checkpoint (positive = improved).
   const trend = (() => {
     const h = s.history || [];
     if (h.length < 2) return null;
     return s.progress - h[0].progress;
   })();
 
+  // Persist the drafted mastery value as a new checkpoint, then close the panel.
   const commit = () => { update(s, { progress: draft }); setTuning(false); };
 
   return (
@@ -110,6 +138,8 @@ function SkillCard({ s, projects, projectName, update, onEdit, onDelete }) {
         <div className="skill-spark"><Sparkline history={s.history} /></div>
       )}
 
+      {/* Projects this skill is linked to, plus a dropdown to link another. The
+          `+e.target.value` converts the selected option string to a number id. */}
       <div className="skill-projects">
         {(s.projects || []).map((pid) => projectName(pid) && (
           <span key={pid} className="badge tag">{projectName(pid)}</span>
@@ -154,11 +184,12 @@ function SkillCard({ s, projects, projectName, update, onEdit, onDelete }) {
 
 export default function Skills() {
   const [skills, setSkills] = useState([]);
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState([]); // for the "link project" dropdown on each card
   const [editing, setEditing] = useState(null); // null | 'new' | skill
   const [form, setForm] = useState(BLANK);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('all');  // active category filter
 
+  // Skills need projects too (to show/link them), so load both.
   const load = () => {
     api.get('/skills').then((r) => setSkills(r.data));
     api.get('/projects').then((r) => setProjects(r.data));
@@ -188,21 +219,27 @@ export default function Skills() {
     load();
   };
 
+  // Patch any field(s) of a skill (used by the slider, project links, etc.).
   const update = async (skill, patch) => { await api.put(`/skills/${skill.id}`, patch); load(); };
+  // Look up a project's name by id (returns undefined if not found).
   const projectName = (id) => projects.find((p) => p.id === id)?.name;
 
+  // Derived summary numbers for the top StatTiles: count, average mastery, the
+  // strongest skill, and how many improved in the last 30 days.
   const stats = useMemo(() => {
     const avg = skills.length ? Math.round(skills.reduce((a, s) => a + s.progress, 0) / skills.length) : 0;
     const top = [...skills].sort((a, b) => b.progress - a.progress)[0];
     const monthAgo = Date.now() - 30 * 86400000;
     const improving = skills.filter((s) => {
       const h = s.history || [];
-      const old = h.filter((p) => new Date(p.date) < monthAgo).pop();
+      const old = h.filter((p) => new Date(p.date) < monthAgo).pop(); // last checkpoint before a month ago
       return old && s.progress > old.progress;
     }).length;
     return { count: skills.length, avg, top, improving };
   }, [skills]);
 
+  // Group skills by category and compute each category's average mastery, sorted
+  // strongest-first. Drives the "Mastery by category" bars and the filter chips.
   const categories = useMemo(() => {
     const map = new Map();
     for (const s of skills) {
@@ -219,6 +256,7 @@ export default function Skills() {
       .sort((a, b) => b.avg - a.avg);
   }, [skills]);
 
+  // The skills actually shown: filtered by category, sorted by mastery descending.
   const visible = useMemo(() => {
     const list = filter === 'all' ? skills : skills.filter((s) => (s.category || 'general') === filter);
     return [...list].sort((a, b) => b.progress - a.progress);
@@ -277,6 +315,8 @@ export default function Skills() {
             </div>
             <div className="skill-grid">
               {visible.map((s) => (
+                // Including progress in the key forces React to remount the card when
+                // mastery changes, so its internal `draft` slider state resets cleanly.
                 <SkillCard
                   key={`${s.id}-${s.progress}`}
                   s={s}

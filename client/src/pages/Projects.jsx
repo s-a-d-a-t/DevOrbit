@@ -1,26 +1,39 @@
+// ============================================================================
+// Projects.jsx  —  PROJECTS + GOALS (two related trackers on one page)
+// ----------------------------------------------------------------------------
+// This page manages TWO kinds of records: Projects (things you build) and Goals
+// (outcomes with checklists of milestones). It's a good example of one component
+// juggling two independent CRUD flows — notice there are two separate modals, two
+// blank templates, and two save handlers, but they share the same load()/refresh.
+// ============================================================================
+
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import StatTile from '../components/StatTile';
 import Modal from '../components/Modal';
 import { IconFolder, IconTarget, IconPlus, IconEdit, IconCheck, IconSpark } from '../components/icons';
 
-const STATUSES = ['planned', 'ongoing', 'completed', 'paused'];
+const STATUSES = ['planned', 'ongoing', 'completed', 'paused']; // project lifecycle states
+// Blank form templates for the two "new" modals.
 const BLANK_PROJECT = { name: '', description: '', techStack: '', repoUrl: '', liveUrl: '', status: 'planned' };
 const BLANK_GOAL = { title: '', type: 'career', targetDate: '', milestones: [{ title: '', done: false }] };
 
+// Format a date like "Jul 2026", or null if there's no date.
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : null);
+// Whole days between two dates (at least 1). 86400000 ms = one day.
 const daysBetween = (a, b) => Math.max(1, Math.round((new Date(b) - new Date(a)) / 86400000));
 
 export default function Projects() {
   const [projects, setProjects] = useState([]);
   const [goals, setGoals] = useState([]);
-  const [skills, setSkills] = useState([]);
-  const [filter, setFilter] = useState('all');
+  const [skills, setSkills] = useState([]);           // to show which skills are linked to a project
+  const [filter, setFilter] = useState('all');        // project status filter
   const [projModal, setProjModal] = useState(null); // null | 'new' | project
   const [projForm, setProjForm] = useState(BLANK_PROJECT);
   const [goalModal, setGoalModal] = useState(null); // null | 'new' | goal
   const [goalForm, setGoalForm] = useState(BLANK_GOAL);
 
+  // Load all three data sets used on this page.
   const load = () => {
     api.get('/projects').then((r) => setProjects(r.data));
     api.get('/goals').then((r) => setGoals(r.data));
@@ -54,6 +67,9 @@ export default function Projects() {
     if (projModal === 'new') {
       await api.post('/projects', { ...payload, startedAt: new Date() });
     } else {
+      // On edit, also manage the completedAt timestamp based on status:
+      // set it when moving TO completed (if not already set), clear it otherwise.
+      // The `...(condition ? {field} : {})` trick conditionally includes a key.
       const status = projForm.status;
       await api.put(`/projects/${projModal.id}`, {
         ...payload,
@@ -66,6 +82,8 @@ export default function Projects() {
     load();
   };
 
+  // Change a project's status straight from its card's dropdown (and keep
+  // completedAt in sync the same way as above).
   const setStatus = async (p, status) => {
     await api.put(`/projects/${p.id}`, {
       status,
@@ -85,6 +103,7 @@ export default function Projects() {
     });
     setGoalModal(g);
   };
+  // Milestone editing helpers for the goal modal (edit one / add / remove a row).
   const setMilestone = (i, title) =>
     setGoalForm((f) => ({ ...f, milestones: f.milestones.map((m, idx) => (idx === i ? { ...m, title } : m)) }));
   const addMilestone = () => setGoalForm((f) => ({ ...f, milestones: [...f.milestones, { title: '', done: false }] }));
@@ -95,6 +114,7 @@ export default function Projects() {
     e.preventDefault();
     if (!goalForm.title.trim()) return;
     const milestones = goalForm.milestones.filter((m) => m.title.trim()).map((m) => ({ title: m.title.trim(), done: !!m.done }));
+    // A goal counts as completed when it has milestones and ALL of them are done.
     const completed = milestones.length > 0 && milestones.every((m) => m.done);
     const payload = {
       title: goalForm.title.trim(),
@@ -109,6 +129,7 @@ export default function Projects() {
     load();
   };
 
+  // Check/uncheck a milestone directly on a goal card, recomputing completion.
   const toggleMilestone = async (goal, idx) => {
     const milestones = goal.milestones.map((m, i) => (i === idx ? { ...m, done: !m.done } : m));
     const completed = milestones.length > 0 && milestones.every((m) => m.done);
@@ -116,6 +137,8 @@ export default function Projects() {
     load();
   };
 
+  // Derived numbers for the top StatTiles. `flatMap` + Set counts unique technologies
+  // across all projects.
   const stats = useMemo(() => {
     const ongoing = projects.filter((p) => p.status === 'ongoing').length;
     const completed = projects.filter((p) => p.status === 'completed').length;
@@ -124,7 +147,9 @@ export default function Projects() {
     return { ongoing, completed, tech, goalsDone };
   }, [projects, goals]);
 
+  // For a given project, the names of skills linked to it (from the skills data).
   const linkedSkills = (p) => skills.filter((s) => s.projects?.includes(p.id)).map((s) => s.name);
+  // Projects shown after applying the status filter.
   const visible = projects.filter((p) => filter === 'all' || p.status === filter);
 
   return (
@@ -196,6 +221,8 @@ export default function Projects() {
         </div>
 
         {goals.length === 0 && <div className="widget w-12"><div className="empty">No goals yet — set one to give your work direction.</div></div>}
+        {/* Each goal card computes its own progress (% of milestones done) and, if a
+            target date is set, how many days remain. */}
         {goals.map((g) => {
           const done = g.milestones.filter((m) => m.done).length;
           const pct = g.milestones.length ? Math.round((done / g.milestones.length) * 100) : g.completed ? 100 : 0;

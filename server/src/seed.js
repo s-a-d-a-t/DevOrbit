@@ -1,9 +1,23 @@
+// ============================================================================
+// server/src/seed.js  —  CREATE A REALISTIC DEMO ACCOUNT WITH SAMPLE DATA
+// ----------------------------------------------------------------------------
+// "Seeding" means pre-filling the database with example data. This builds a full
+// demo user (demo@devpulse.dev / demo1234) with tasks, study logs, skills,
+// projects, habits, goals, resources, a note, and memories — so the app looks
+// alive on first run instead of empty. Runs automatically in embedded-DB dev mode,
+// or manually via `npm run seed` (see the bottom of the file).
+//
+// It's also a handy reference for how to CREATE records with Sequelize
+// (Model.create / Model.bulkCreate).
+// ============================================================================
+
 import 'dotenv/config';
 import {
   User, Task, LearningLog, Skill, Project, Habit, Goal, Resource, Note, Memory,
 } from './models/index.js';
 import { logActivity, todayKey } from './services/activityService.js';
 
+// The "YYYY-MM-DD" key for `offset` days ago — used to scatter data across history.
 const dayKey = (offset) => {
   const d = new Date();
   d.setDate(d.getDate() - offset);
@@ -11,6 +25,8 @@ const dayKey = (offset) => {
 };
 
 export async function seedDemoData() {
+  // Idempotency guard: if the demo user already exists, do nothing. This makes it
+  // safe to call on every startup without piling up duplicates.
   if (await User.findOne({ where: { email: 'demo@devpulse.dev' } })) return;
   console.log('[seed] creating demo account: demo@devpulse.dev / demo1234');
 
@@ -22,8 +38,9 @@ export async function seedDemoData() {
     githubUsername: 'demodev',
     dailyGoalHours: 3,
   });
-  const uid = user.id;
+  const uid = user.id; // every record below is tied to this user via UserId
 
+  // bulkCreate inserts many rows in one call (faster than looping create()).
   await Task.bulkCreate([
     { UserId: uid, title: 'Finish DevPulse analytics page', priority: 'high', status: 'in-progress', tags: ['devpulse', 'react'], dueDate: new Date() },
     { UserId: uid, title: 'Solve 3 LeetCode mediums', priority: 'medium', status: 'pending', tags: ['dsa'] },
@@ -32,10 +49,12 @@ export async function seedDemoData() {
     { UserId: uid, title: 'Read Express error-handling docs', priority: 'low', status: 'done', tags: ['learning'], completedAt: new Date() },
   ]);
 
+  // Generate ~45 days of study history with some randomness so the heatmap looks
+  // organic (varied hours, occasional rest days, random difficulty/notes).
   const topics = ['React hooks', 'SQL joins & indexes', 'System design', 'TypeScript generics', 'Graph algorithms', 'Docker basics', 'JWT auth', 'CSS grid'];
   for (let i = 0; i < 45; i++) {
     if (Math.random() < 0.3) continue; // rest days keep the heatmap realistic
-    const hours = Math.round((0.5 + Math.random() * 3.5) * 2) / 2;
+    const hours = Math.round((0.5 + Math.random() * 3.5) * 2) / 2; // 0.5..4.0 in half steps
     const d = new Date();
     d.setDate(d.getDate() - i);
     await LearningLog.create({
@@ -46,6 +65,7 @@ export async function seedDemoData() {
       notes: i % 5 === 0 ? 'Went deep, took notes in Obsidian.' : '',
       date: d,
     });
+    // Also record that day's activity so the score/heatmap reflect this history.
     await logActivity(uid, {
       learningHours: hours,
       tasksCompleted: Math.random() < 0.5 ? 1 + Math.floor(Math.random() * 3) : 0,
@@ -72,6 +92,8 @@ export async function seedDemoData() {
     completedAt: new Date(Date.now() - 60 * 86400000),
   });
 
+  // Build a fake progress history for a skill: four checkpoints (90/60/30/0 days
+  // ago) climbing toward `target`, so the sparkline/line chart shows an upward trend.
   const mkHistory = (target) =>
     [90, 60, 30, 0].map((off, i) => ({
       progress: Math.max(5, Math.round(target * (0.4 + i * 0.2))),
@@ -155,6 +177,7 @@ SELECT date, score FROM "Activities" ORDER BY date DESC LIMIT 7;
 `,
   });
 
+  // Helper to build an Unsplash image URL from a photo id (keeps the list below tidy).
   const memImg = (id, w = 600) =>
     `https://images.unsplash.com/photo-${id}?q=80&w=${w}&auto=format&fit=crop`;
   await Memory.bulkCreate([
@@ -189,6 +212,9 @@ SELECT date, score FROM "Activities" ORDER BY date DESC LIMIT 7;
 }
 
 // Run directly (`npm run seed`): seeds the configured PostgreSQL database.
+// This block only runs when the file is executed as a script (not when imported by
+// index.js). It checks whether this file is the process's entry point, and if so
+// sets up its own DB connection, seeds, and closes cleanly.
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) {
   const { connectDB } = await import('./db.js');
   const { initModels } = await import('./models/index.js');

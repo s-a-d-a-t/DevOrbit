@@ -1,7 +1,33 @@
+// ============================================================================
+// DomeGallery.jsx  —  A DRAGGABLE 3D "DOME" OF IMAGES (used on the Memories page)
+// ----------------------------------------------------------------------------
+// This is the most COMPLEX component in the project — an interactive 3D sphere of
+// photos you can spin with the mouse/finger, and click a tile to enlarge it with
+// a smooth animation. It's essentially a self-contained widget (the kind of thing
+// you'd normally install from a library).
+//
+// DON'T try to read this top to bottom your first time. Understand it in layers:
+//   1. Data:   `buildItems()` places each image on a grid of angles around a sphere.
+//   2. Render: the JSX at the BOTTOM lays out those tiles; CSS 3D transforms
+//              (rotateX/rotateY + translateZ) bend the flat grid into a dome.
+//   3. Drag:   `useGesture` tracks pointer drags and updates the sphere's rotation;
+//              `startInertia` keeps it spinning after you let go (momentum).
+//   4. Zoom:   `openItemFromElement` / the `close` handler animate a clicked tile
+//              up to a big centered overlay and back. This is hand-written DOM
+//              animation (lots of getBoundingClientRect + style tweaks) — advanced,
+//              and safe to treat as a black box while you learn the rest of the app.
+//
+// Because so much of this manipulates the DOM directly (not through React state),
+// you'll see many `useRef`s used as plain mutable variables that survive renders.
+// ============================================================================
+
 import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
+// @use-gesture turns raw pointer/touch events into friendly drag callbacks
+// (with velocity, direction, etc.) — used to spin the dome.
 import { useGesture } from '@use-gesture/react';
 import './DomeGallery.css';
 
+// Fallback images shown if the parent doesn't pass its own `images` prop.
 const DEFAULT_IMAGES = [
   {
     src: 'https://images.unsplash.com/photo-1755331039789-7e5680e26e8f?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
@@ -30,25 +56,34 @@ const DEFAULT_IMAGES = [
   { src: 'https://pbs.twimg.com/media/Gyla7NnXMAAXSo_?format=jpg&name=large', alt: 'Social media image' }
 ];
 
+// Default tuning values for the interaction feel.
 const DEFAULTS = {
-  maxVerticalRotationDeg: 5,
-  dragSensitivity: 20,
-  enlargeTransitionMs: 300,
-  segments: 35
+  maxVerticalRotationDeg: 5,   // how far up/down you can tilt the dome
+  dragSensitivity: 20,         // higher = you must drag further to rotate
+  enlargeTransitionMs: 300,    // duration of the open/close zoom animation
+  segments: 35                 // how many columns of tiles wrap around the sphere
 };
 
+// --- Small math helpers ------------------------------------------------------
+// Keep a value within [min, max].
 const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+// Force an angle into the 0..359 range.
 const normalizeAngle = d => ((d % 360) + 360) % 360;
+// Force an angle into the -180..180 range (so we always take the shortest turn).
 const wrapAngleSigned = deg => {
   const a = (((deg + 180) % 360) + 360) % 360;
   return a - 180;
 };
+// Read a numeric `data-*` attribute off a DOM element, with a fallback if missing/invalid.
 const getDataNumber = (el, name, fallback) => {
   const attr = el.dataset[name] ?? el.getAttribute(`data-${name}`);
   const n = attr == null ? NaN : parseFloat(attr);
   return Number.isFinite(n) ? n : fallback;
 };
 
+// Build the array of tiles: assigns each grid slot an (x, y) angular position and
+// an image, cycling through the provided images and nudging things so the same
+// picture doesn't land in two adjacent slots. Returns one object per tile.
 function buildItems(pool, seg) {
   const xCols = Array.from({ length: seg }, (_, i) => -37 + i * 2);
   const evenYs = [-4, -2, 0, 2, 4];
@@ -105,6 +140,9 @@ function buildItems(pool, seg) {
   }));
 }
 
+// Given a tile's grid offset, return the X/Y rotation (in degrees) that places it
+// on the sphere's surface. Used both for laying out tiles and for computing how far
+// to counter-rotate a clicked tile so it faces the camera when enlarged.
 function computeItemBaseRotation(offsetX, offsetY, sizeX, sizeY, segments) {
   const unit = 360 / segments / 2;
   const rotateY = unit * (offsetX + (sizeX - 1) / 2);
@@ -112,6 +150,8 @@ function computeItemBaseRotation(offsetX, offsetY, sizeX, sizeY, segments) {
   return { rotateX, rotateY };
 }
 
+// The component. Lots of props, but they're all visual/behavioral knobs with
+// defaults — you can render <DomeGallery images={...} /> and ignore the rest.
 export default function DomeGallery({
   images = DEFAULT_IMAGES,
   fit = 0.5,
@@ -131,28 +171,33 @@ export default function DomeGallery({
   openedImageBorderRadius = '30px',
   grayscale = true
 }) {
-  const rootRef = useRef(null);
-  const mainRef = useRef(null);
-  const sphereRef = useRef(null);
-  const frameRef = useRef(null);
-  const viewerRef = useRef(null);
-  const scrimRef = useRef(null);
-  const focusedElRef = useRef(null);
-  const originalTilePositionRef = useRef(null);
+  // --- Refs to DOM nodes we manipulate directly (not via React state) ---
+  const rootRef = useRef(null);       // outermost wrapper
+  const mainRef = useRef(null);       // the drag surface
+  const sphereRef = useRef(null);     // the rotating sphere element
+  const frameRef = useRef(null);      // target rectangle an enlarged image animates to
+  const viewerRef = useRef(null);     // container for the enlarged overlay
+  const scrimRef = useRef(null);      // dim backdrop behind an enlarged image
+  const focusedElRef = useRef(null);  // the currently-enlarged tile element
+  const originalTilePositionRef = useRef(null); // where that tile was, for the close animation
 
   // The memory/event opened in the enlarged view — drives the description caption.
+  // This is the ONE piece of real React state; it just controls the caption text.
   const [openItem, setOpenItem] = useState(null);
 
-  const rotationRef = useRef({ x: 0, y: 0 });
-  const startRotRef = useRef({ x: 0, y: 0 });
-  const startPosRef = useRef(null);
-  const draggingRef = useRef(false);
-  const movedRef = useRef(false);
-  const inertiaRAF = useRef(null);
-  const openingRef = useRef(false);
-  const openStartedAtRef = useRef(0);
-  const lastDragEndAt = useRef(0);
+  // --- Mutable "instance variables" via refs ---
+  // These hold live values across frames WITHOUT causing re-renders (refs don't).
+  const rotationRef = useRef({ x: 0, y: 0 });  // current dome rotation
+  const startRotRef = useRef({ x: 0, y: 0 });  // rotation when a drag began
+  const startPosRef = useRef(null);            // pointer position when a drag began
+  const draggingRef = useRef(false);           // is a drag in progress?
+  const movedRef = useRef(false);              // did the pointer move enough to count as a drag (vs a click)?
+  const inertiaRAF = useRef(null);             // handle for the momentum animation frame
+  const openingRef = useRef(false);            // is an open/enlarge animation running?
+  const openStartedAtRef = useRef(0);          // timestamp the open began (debounces accidental close)
+  const lastDragEndAt = useRef(0);             // timestamp a drag ended (debounces click-after-drag)
 
+  // --- Body scroll lock while an image is enlarged ---
   const scrollLockedRef = useRef(false);
   const lockScroll = useCallback(() => {
     if (scrollLockedRef.current) return;
@@ -166,8 +211,12 @@ export default function DomeGallery({
     document.body.classList.remove('dg-scroll-lock');
   }, []);
 
+  // Compute the tile layout once (recompute only if images/segments change).
   const items = useMemo(() => buildItems(images, segments), [images, segments]);
 
+  // The core "rotate the dome" function: writes a CSS 3D transform onto the sphere.
+  // We set style directly (not React state) so dragging stays buttery smooth —
+  // going through React on every pointer move would be too slow.
   const applyTransform = (xDeg, yDeg) => {
     const el = sphereRef.current;
     if (el) {
@@ -177,6 +226,9 @@ export default function DomeGallery({
 
   const lockedRadiusRef = useRef(null);
 
+  // Effect: keep the dome sized to its container. A ResizeObserver recalculates the
+  // sphere radius and various CSS variables whenever the element resizes, and
+  // repositions any currently-open enlarged image so it stays centered.
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
@@ -261,10 +313,12 @@ export default function DomeGallery({
     openedImageHeight
   ]);
 
+  // On mount, apply the initial rotation so the dome starts in the right pose.
   useEffect(() => {
     applyTransform(rotationRef.current.x, rotationRef.current.y);
   }, []);
 
+  // Cancel any running momentum spin.
   const stopInertia = useCallback(() => {
     if (inertiaRAF.current) {
       cancelAnimationFrame(inertiaRAF.current);
@@ -272,6 +326,9 @@ export default function DomeGallery({
     }
   }, []);
 
+  // Momentum: after you release a drag, keep spinning and gradually slow down
+  // (friction) until the speed is negligible. Each `step` runs on a frame, decays
+  // the velocity, nudges the rotation, and schedules the next frame.
   const startInertia = useCallback(
     (vx, vy) => {
       const MAX_V = 1.4;
@@ -305,6 +362,9 @@ export default function DomeGallery({
     [dragDampening, maxVerticalRotationDeg, stopInertia]
   );
 
+  // Wire up drag handling on the main surface. useGesture gives us tidy
+  // start/move/end callbacks; we translate pointer movement into dome rotation,
+  // and on release we hand the leftover velocity to startInertia for momentum.
   useGesture(
     {
       onDragStart: ({ event }) => {
@@ -355,6 +415,10 @@ export default function DomeGallery({
     { target: mainRef, eventOptions: { passive: true } }
   );
 
+  // Effect: handle CLOSING an enlarged image. Clicking the dim backdrop (scrim) or
+  // pressing Escape runs `close`, which animates the big overlay back down to the
+  // original tile's position and restores everything. This is intricate hand-rolled
+  // DOM animation — skim it; the takeaway is "reverse the open animation, then clean up".
   useEffect(() => {
     const scrim = scrimRef.current;
     if (!scrim) return;
@@ -457,6 +521,13 @@ export default function DomeGallery({
     };
   }, [enlargeTransitionMs, unlockScroll]);
 
+  // OPEN/ENLARGE a tile. Given the clicked tile element, this:
+  //   1. records where the tile currently is on screen,
+  //   2. creates an overlay <div> starting exactly on top of the tile,
+  //   3. animates that overlay to a large, centered position (the "frame"),
+  //   4. optionally resizes it to a custom opened width/height.
+  // The FLIP-style trick (measure start + end rects, then transition between them)
+  // is how it feels like the tile smoothly grows out of the dome.
   const openItemFromElement = useCallback(
     el => {
       if (openingRef.current) return;
@@ -576,6 +647,9 @@ export default function DomeGallery({
     [enlargeTransitionMs, lockScroll, openedImageHeight, openedImageWidth, segments, unlockScroll]
   );
 
+  // Click handler for a tile (mouse). All these guards exist to distinguish a real
+  // click from the tail end of a drag: ignore if currently dragging, if the pointer
+  // moved, if a drag just ended (<80ms ago), or if an open animation is already running.
   const onTileClick = useCallback(
     e => {
       if (draggingRef.current) return;
@@ -587,6 +661,7 @@ export default function DomeGallery({
     [openItemFromElement]
   );
 
+  // Same idea for touch devices, triggered on pointer-up (only for touch pointers).
   const onTilePointerUp = useCallback(
     e => {
       if (e.pointerType !== 'touch') return;
@@ -599,12 +674,17 @@ export default function DomeGallery({
     [openItemFromElement]
   );
 
+  // Safety cleanup on unmount: make sure we never leave the page scroll locked.
   useEffect(() => {
     return () => {
       document.body.classList.remove('dg-scroll-lock');
     };
   }, []);
 
+  // --- Render ---------------------------------------------------------------
+  // The markup is deliberately simple; the 3D look comes almost entirely from CSS
+  // (see DomeGallery.css) reading the CSS variables we set below. Each tile carries
+  // its grid position as data-* attributes so the open/close code can read them.
   return (
     <div
       ref={rootRef}
@@ -620,7 +700,10 @@ export default function DomeGallery({
     >
       <main ref={mainRef} className="sphere-main">
         <div className="stage">
+          {/* The rotating sphere. applyTransform() writes its 3D rotation. */}
           <div ref={sphereRef} className="sphere">
+            {/* One element per tile. data-* attributes carry the tile's angular
+                position + metadata so the open/close animation can read them back. */}
             {items.map((it, i) => (
               <div
                 key={`${it.x},${it.y},${i}`}
@@ -654,11 +737,17 @@ export default function DomeGallery({
           </div>
         </div>
 
+        {/* Decorative overlays: a blur/vignette and top/bottom fades that soften
+            the edges of the dome so tiles seem to curve away. */}
         <div className="overlay" />
         <div className="overlay overlay--blur" />
         <div className="edge-fade edge-fade--top" />
         <div className="edge-fade edge-fade--bottom" />
 
+        {/* The "viewer" holds the enlarged-image machinery:
+            - scrim: the dim backdrop (click it to close)
+            - frame: an invisible target rectangle the enlarged image animates into
+            - dg-caption: the title/description shown for the opened item */}
         <div className="viewer" ref={viewerRef}>
           <div ref={scrimRef} className="scrim" />
           <div ref={frameRef} className="frame" />
