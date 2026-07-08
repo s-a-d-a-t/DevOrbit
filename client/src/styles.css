@@ -1087,14 +1087,14 @@ button.icon-btn.on { color: var(--gold); background: var(--gold-wash); }
 .landing::before { content: ''; display: block; height: 3px; background: var(--tricolor); position: relative; z-index: 2; }
 :root[data-theme='dark'] .landing::before { display: none; }
 
-/* GridMotion animated hero backdrop */
+/* Grainient animated hero backdrop */
 .landing-bg {
   position: absolute; top: 0; left: 0; right: 0;
   height: 100vh;
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
-  opacity: 0.6;
+  opacity: 0.78;
 }
 /* scrim: keep the grid off the headline, and fade it into the page below */
 .landing-bg::after {

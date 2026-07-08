@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { HEAT } from '../chartTheme';
 import { useTheme } from '../context/ThemeContext';
 import { IconLogo, IconGitHub, IconMail, IconSun, IconMoon } from '../components/icons';
-import GridMotion from '../components/GridMotion';
+import Grainient from '../components/Grainient';
 
 /* reveal-on-scroll */
 function useReveal() {
@@ -16,32 +16,6 @@ function useReveal() {
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
   }, []);
-}
-
-/* counts up when scrolled into view */
-function Counter({ to, suffix = '', prefix = '' }) {
-  const ref = useRef(null);
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (!e.isIntersecting) return;
-        io.disconnect();
-        const t0 = performance.now();
-        const dur = 1100;
-        const tick = (t) => {
-          const p = Math.min(1, (t - t0) / dur);
-          setVal(Math.round(to * (1 - Math.pow(1 - p, 3))));
-          if (p < 1) requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
-      },
-      { threshold: 0.6 }
-    );
-    if (ref.current) io.observe(ref.current);
-    return () => io.disconnect();
-  }, [to]);
-  return <span ref={ref}>{prefix}{val}{suffix}</span>;
 }
 
 function MockHeatmap({ cols = 22, size = 9 }) {
@@ -67,21 +41,30 @@ const TIMELINE = [
   ['18:00', 'Reflect', 'A note, a habit check, and the day lights up another cell on the calendar.'],
 ];
 
-/* thematic tokens for the animated hero backdrop */
-const GRID_ITEMS = [
-  'git commit', 'Tasks', '21d streak', 'Focus', 'SELECT *', 'Skills', 'deep work',
-  'Notes', '12.5h', 'Habits', 'Analytics', 'npm run dev', 'Goals', 'Projects',
-  'Learning', 'score 449', 'Memories', 'const', 'ship it', 'PostgreSQL', 'React',
-  'Node.js', 'JWT', 'streak', 'today plan', 'reviews', 'done ✓', 'contribute',
-];
-
 export default function Landing() {
   useReveal();
   const { theme, toggleTheme } = useTheme();
+  // brand-matched gradient (design system tricolor: gold → ember → sage),
+  // tuned per theme so the backdrop stays warm in light and deep in dark
+  const grain = theme === 'dark'
+    ? { color1: '#D77B50', color2: '#C9922E', color3: '#3A4A34' }
+    : { color1: '#CE6C47', color2: '#B4792B', color3: '#5F7D57' };
   return (
     <div className="landing">
       <div className="landing-bg" aria-hidden>
-        <GridMotion items={GRID_ITEMS} gradientColor="var(--forest-wash)" />
+        <Grainient
+          color1={grain.color1}
+          color2={grain.color2}
+          color3={grain.color3}
+          timeSpeed={0.18}
+          warpStrength={1.0}
+          warpAmplitude={60.0}
+          blendSoftness={0.12}
+          grainAmount={0.06}
+          contrast={1.35}
+          saturation={1.25}
+          zoom={0.9}
+        />
       </div>
 
       <div className="landing-inner">
@@ -128,15 +111,6 @@ export default function Landing() {
           </div>
         </section>
       </div>
-
-      <section className="stats-band reveal">
-        <div className="landing-inner">
-          <div className="stat-cell"><div className="n"><Counter to={9} /></div><div className="l">modules, one system</div></div>
-          <div className="stat-cell"><div className="n"><Counter to={365} /></div><div className="l">days on your calendar</div></div>
-          <div className="stat-cell"><div className="n"><Counter to={100} suffix="%" /></div><div className="l">yours — self-hosted data</div></div>
-          <div className="stat-cell"><div className="n"><Counter to={0} /></div><div className="l">distractions by design</div></div>
-        </div>
-      </section>
 
       <div className="landing-inner">
         <section className="feature-rows">
