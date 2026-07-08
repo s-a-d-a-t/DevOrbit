@@ -113,3 +113,6 @@ export const IconStop = (p) => (
 export const IconClose = (p) => (
   <I {...p}><path d="M6 6l12 12M18 6 6 18" /></I>
 );
+export const IconMenu = (p) => (
+  <I {...p}><path d="M4 7h16M4 12h16M4 17h16" /></I>
+);
