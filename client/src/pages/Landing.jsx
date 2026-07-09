@@ -219,7 +219,7 @@ export default function Landing() {
                 <IconGitHub size={17} /> github
               </a>
               <a href="mailto:sdrkk66@gmail.com" title="Email Sadat">
-                <IconMail size={17} /> Email
+                <IconMail size={17} />Email
               </a>
             </div>
           </div>
