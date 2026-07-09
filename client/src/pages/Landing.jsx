@@ -216,10 +216,10 @@ export default function Landing() {
             <span className="crafted">Crafted by <strong>Sadat Amir</strong></span>
             <div className="footer-links">
               <a href="https://github.com/s-a-d-a-t" target="_blank" rel="noreferrer" title="GitHub — s-a-d-a-t">
-                <IconGitHub size={17} /> github.com/s-a-d-a-t
+                <IconGitHub size={17} /> github
               </a>
               <a href="mailto:sdrkk66@gmail.com" title="Email Sadat">
-                <IconMail size={17} /> sdrkk66@gmail.com
+                <IconMail size={17} /> Email
               </a>
             </div>
           </div>
