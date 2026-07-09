@@ -38,7 +38,9 @@ export function initModels(sequelize) {
     // don't accidentally leak the hash to the client. Use the 'withPassword' scope
     // explicitly (during login) when we genuinely need it to compare.
     defaultScope: { attributes: { exclude: ['password'] } },
-    scopes: { withPassword: {} },
+    // This scope is used only during login, where we must explicitly include the
+    // password hash so bcrypt can compare it against the submitted password.
+    scopes: { withPassword: { attributes: { include: ['password'] } } },
   });
 
   // Hook: before any save, if the password changed, replace it with a bcrypt HASH.

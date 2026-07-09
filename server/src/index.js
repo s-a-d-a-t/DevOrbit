@@ -38,12 +38,26 @@ initModels(sequelize);
 // tables. In that case, do a plain sync first so Sequelize creates everything
 // cleanly. Only use `alter` when all expected tables already exist.
 {
-  const queryInterface = sequelize.getQueryInterface();
-  const existingTables = new Set((await queryInterface.showAllTables()).map((table) => String(table)));
-  const expectedTables = Object.values(sequelize.models).map((model) => String(model.getTableName()));
-  const hasAllTables = expectedTables.every((table) => existingTables.has(table));
+  const normalizeTableName = (table) => {
+    if (typeof table === 'string') return table;
+    if (table && typeof table === 'object') return table.tableName ?? table.tablename ?? table.name ?? String(table);
+    return String(table);
+  };
 
-  await sequelize.sync(hasAllTables ? { alter: true } : undefined);
+  const queryInterface = sequelize.getQueryInterface();
+  const existingTables = new Set((await queryInterface.showAllTables()).map(normalizeTableName));
+  const expectedTables = Object.values(sequelize.models).map((model) => normalizeTableName(model.getTableName()));
+  const matchingTables = expectedTables.filter((table) => existingTables.has(table)).length;
+
+  if (matchingTables === 0) {
+    await sequelize.sync();
+  } else if (matchingTables === expectedTables.length) {
+    await sequelize.sync({ alter: true });
+  } else {
+    // Partial schema usually means an interrupted import or a half-created DB.
+    // Rebuild the app tables cleanly so the app can start from a consistent state.
+    await sequelize.sync({ force: true });
+  }
 }
 
 // Routes import models, so load them after initModels().
