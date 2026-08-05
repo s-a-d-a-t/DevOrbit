@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database Service
+  db:
+    image: postgres:15-alpine
+    container_name: devorbit-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: devorbit
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d devorbit"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Express Backend API Service
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: devorbit-server
+    command: npm run dev
+    volumes:
+      - ./server:/usr/src/app
+      - /usr/src/app/node_modules  # Prevents container's node_modules from being overwritten by host
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/devorbit?sslmode=disable
+      - MEMORY_DB=0  # Run against Postgres DB container, not in-memory
+      - JWT_SECRET=devpulse-dev-secret-key-12345
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # 3. React/Vite Frontend Service
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: devorbit-client
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/usr/src/app
+      - /usr/src/app/node_modules  # Prevents container's node_modules from being overwritten by host
+    environment:
+      - VITE_PROXY_TARGET=http://server:5000
+    depends_on:
+      - server
+
+volumes:
+  pgdata: # Named volume to persist database files on your host machine
