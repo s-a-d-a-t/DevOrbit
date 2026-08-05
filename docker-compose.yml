@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   # 1. PostgreSQL Database Service
@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: devorbit
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
